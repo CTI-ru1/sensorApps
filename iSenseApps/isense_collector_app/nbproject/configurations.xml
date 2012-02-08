@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="79">
+    <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+        <df name="isense_collector_app" root=".">
+            <df name="bin">
+                <df name="JN5139R1">
+                    <in>iSenseCollectorApp.bin</in>
+                </df>
+            </df>
+            <df name="src">
+                <in>collector_message.h</in>
+                <in>iSenseCollectorApp.cpp</in>
+            </df>
+        </df>
+        <logicalFolder name="ExternalFiles"
+                       displayName="Important Files"
+                       projectFiles="false"
+                       kind="IMPORTANT_FILES_FOLDER">
+            <itemPath>Makefile</itemPath>
+        </logicalFolder>
+    </logicalFolder>
+    <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+    <sourceRootList>
+        <Elem>.</Elem>
+    </sourceRootList>
+    <projectmakefile>Makefile</projectmakefile>
+    <confs>
+        <conf name="Default" type="0">
+            <toolsSet>
+                <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+                <compilerSet>default</compilerSet>
+            </toolsSet>
+            <makefileType>
+                <makeTool>
+                    <buildCommandWorkingDir>.</buildCommandWorkingDir>
+                    <buildCommand>${MAKE} -f Makefile</buildCommand>
+                    <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+                    <executablePath></executablePath>
+                    <ccTool>
+                        <incDir>
+                            <pElem>../../../wiselib/wiselib.testing</pElem>
+                            <pElem>.</pElem>
+                            <pElem>../../../SDK/iSense/src</pElem>
+                            <pElem>../../../wiselib/wiselib.stable</pElem>
+                        </incDir>
+                    </ccTool>
+                </makeTool>
+            </makefileType>
+        </conf>
+    </confs>
+</configurationDescriptor>
