@@ -9,7 +9,6 @@
 #include <isense/modules/environment_module/temp_sensor.h>
 #include <isense/modules/environment_module/light_sensor.h>
 #include <isense/modules/security_module/pir_sensor.h>
-#include <isense/modules/security_module/lis_accelerometer.h>
 
 
 typedef wiselib::OSMODEL Os;
@@ -40,7 +39,7 @@ typedef Os::TxRadio::block_data_t block_data_t;
 class Application
 :
 public isense::SensorHandler,
-public isense::BufferDataHandler,
+//public isense::BufferDataHandler,
 public isense::Int8DataHandler,
 public isense::Uint32DataHandler {
 public:
@@ -77,7 +76,7 @@ public:
         uart_ = &wiselib::FacetProvider<Os, Os::Uart>::get_facet(value);
         clock_ = &wiselib::FacetProvider<Os, Os::Clock>::get_facet(value);
 
-//        cm_ = new isense::CoreModule(value);
+        //        cm_ = new isense::CoreModule(value);
 
         mygateway_ = 0xffff;
 
@@ -120,7 +119,7 @@ public:
         uart_->reg_read_callback<Application, &Application::handle_uart_msg > (this);
         uart_->enable_serial_comm();
 
-        debug_->debug("INIT ");
+        //        debug_->debug("INIT ");
 
         nb_.init(*radio_, *clock_, *timer_, *debug_, 2000, 16000, 250, 255);
         nb_.enable();
@@ -198,7 +197,7 @@ protected:
      * Handles a new sensor reading
      */
     virtual void handle_sensor() {
-        debug_->debug("pir event");
+        //        debug_->debug("pir event");
         if (!is_gateway()) {
             collectorMsg_t mess1;
             mess1.set_collector_type_id(collectorMsg_t::PIR);
@@ -211,23 +210,23 @@ protected:
             debug_->debug("id::%x EM_E 1 ", radio_->id());
         }
     }
-
-    /**
-     * Handles a new accelerometer event
-     * @param acceleration in 3 axis
-     */
-    virtual void handle_buffer_data(isense::BufferData* data) {
-        if (!is_gateway()) {
-            collectorMsg_t mess1;
-            mess1.set_collector_type_id(collectorMsg_t::ACCELEROMETER);
-            //            radio_->send(mygateway_, mess1.buffer_size(), (uint8*) & mess1);
-        } else {
-            debug_->debug("id::%x EM_A 1 ", radio_->id());
-        }
-
-        //return from continuous mode to threshold mode
-        accelerometer_->set_mode(MODE_THRESHOLD);
-    }
+    //
+    //    /**
+    //     * Handles a new accelerometer event
+    //     * @param acceleration in 3 axis
+    //     */
+    //    virtual void handle_buffer_data(isense::BufferData* data) {
+    //        if (!is_gateway()) {
+    //            collectorMsg_t mess1;
+    //            mess1.set_collector_type_id(collectorMsg_t::ACCELEROMETER);
+    //            //            radio_->send(mygateway_, mess1.buffer_size(), (uint8*) & mess1);
+    //        } else {
+    //            debug_->debug("id::%x EM_A 1 ", radio_->id());
+    //        }
+    //
+    //        //return from continuous mode to threshold mode
+    //        accelerometer_->set_mode(MODE_THRESHOLD);
+    //    }
 
     /**
      * Handles a new neighborhood event
@@ -279,19 +278,19 @@ protected:
         //    cm_->led_off();
         //} else {
 
-            node_id_t node;
-            memcpy(&node, mess, sizeof (node_id_t));
-            radio_->send(node, len - 2, (uint8*) mess + 2);
-            debug_command(mess + 2, 13, node);
-            if (len > 8) {
-                char buffer[100];
-                int bytes_written = 0;
-                for (int i = 8; i < len; i++) {
-                    bytes_written += sprintf(buffer + bytes_written, "%d", mess[i]);
-                }
-                buffer[bytes_written] = '\0';
-                debug_->debug("FORWARDING to %x %s", node, buffer);
+        node_id_t node;
+        memcpy(&node, mess, sizeof (node_id_t));
+        radio_->send(node, len - 2, (uint8*) mess + 2);
+        debug_command(mess + 2, 13, node);
+        if (len > 8) {
+            char buffer[100];
+            int bytes_written = 0;
+            for (int i = 8; i < len; i++) {
+                bytes_written += sprintf(buffer + bytes_written, "%d", mess[i]);
             }
+            buffer[bytes_written] = '\0';
+            debug_->debug("FORWARDING to %x %s", node, buffer);
+        }
         //}
 
 
@@ -305,7 +304,7 @@ protected:
      * @param buf
      */
     void receive(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
-	debug_->debug("recv from %x",src_addr);
+        //debug_->debug("recv from %x",src_addr);
 
         if (!is_gateway()) {
             if (check_gateway(src_addr, len, buf)) return;
@@ -341,7 +340,7 @@ protected:
             }
             if (sGmsg) {
                 mygateway_ = src_addr;
-                debug_->debug("mygateway_->%x", mygateway_);
+                //                debug_->debug("mygateway_->%x", mygateway_);
                 return true;
             }
         }
@@ -419,8 +418,21 @@ protected:
                 debug_->debug("id::%x RL%d %d ", src_addr, mess->get_zone(), mess->get_status());
             } else if (mess->collector_type_id() == collectorMsg_t::CHAIR) {
                 debug_->debug("id::%x CS %d ", src_addr, mess->get_uint8());
-	    } else if (mess->collector_type_id() == collectorMsg_t::TTEST){
-		debug_->debug("id::%x TEST 1 ", src_addr);
+            } else if (mess->collector_type_id() == collectorMsg_t::TTEST) {
+                debug_->debug("id::%x TEST 1 ", src_addr);
+            } else if (mess->collector_type_id() == collectorMsg_t::TEMPERATURE_ARDUINO) {
+                debug_->debug("id::%x EM_T %d ", src_addr, mess->get_uint8());
+            } else if (mess->collector_type_id() == collectorMsg_t::DESCRIPTION) {
+                debug_payload(buf, len, src_addr);
+                char buffer[100];
+                int bytes_written = 0;
+                bytes_written += sprintf(buffer + bytes_written, "id::%x SELF ", src_addr);
+                for (size_t i = 0; i < buf[5]; i++) {
+                    bytes_written += sprintf(buffer + bytes_written, "%d,", buf[5 + 1 + i]);
+                }
+                bytes_written += sprintf(buffer + bytes_written, " ");
+                buffer[bytes_written] = '\0';
+                debug_->debug("%s", buffer);
             } else {
                 //debug_payload(buf, len, src_addr);
             }
@@ -476,9 +488,9 @@ private:
     bool pir_sensor_;
 
     isense::EnvironmentModule* em_;
-    isense::LisAccelerometer* accelerometer_;
+    //    isense::LisAccelerometer* accelerometer_;
     isense::PirSensor* pir_;
-//    isense::CoreModule* cm_;
+    //    isense::CoreModule* cm_;
 
     Os::TxRadio::self_pointer_t radio_;
     Os::Timer::self_pointer_t timer_;
