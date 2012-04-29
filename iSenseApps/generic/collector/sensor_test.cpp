@@ -18,7 +18,7 @@ typedef wiselib::OSMODEL Os;
 typedef wiselib::Echo<Os, Os::TxRadio, Os::Timer, Os::Debug> nb_t;
 
 //MESSAGE_TYPES
-#include "./collector_message.h"
+#include "../../../messages/collector_message_new.h"
 typedef wiselib::CollectorMsg<Os, Os::TxRadio> collectorMsg_t;
 typedef wiselib::BroadcastMsg<Os, Os::TxRadio> broadcastMsg_t;
 
@@ -114,7 +114,7 @@ public:
 
 
         radio_->reg_recv_callback<Application, &Application::receive > (this);
-        radio_->set_channel(12);
+        radio_->set_channel(13);
 
         uart_->reg_read_callback<Application, &Application::handle_uart_msg > (this);
         uart_->enable_serial_comm();
@@ -152,29 +152,37 @@ public:
                 int16 temp = em_->temp_sensor()->temperature();
                 if (temp < 100) {
                     collectorMsg_t mess;
-                    mess.set_collector_type_id(collectorMsg_t::TEMPERATURE);
-                    mess.set_temperature(&temp);
-                    debug_->debug("Contains temp %d -> %x ", temp, mygateway_);
-                    radio_->send(mygateway_, mess.buffer_size(), (uint8*) & mess);
+                    mess.set_source(radio_->id());
+                    char temp_string[30];
+                    sprintf(temp_string, "%s", "temperature");
+                    mess.set_capability(temp_string);
+                    sprintf(temp_string, "%d", temp);
+                    mess.set_value(temp_string);
+                    debug_->debug("Contains temp %s -> %s ", mess.capability(), mess.value());
+                    radio_->send(mygateway_, mess.length(), (uint8*) & mess);
                 }
                 uint32 lux = em_->light_sensor()->luminance();
                 if (lux < 20000) {
-                    collectorMsg_t mess1;
-                    mess1.set_collector_type_id(collectorMsg_t::LIGHT);
-                    mess1.set_light(&lux);
-                    debug_->debug("Contains light %d -> %x", lux, mygateway_);
-                    radio_->send(mygateway_, mess1.buffer_size(), (uint8*) & mess1);
+                    collectorMsg_t mess;
+                    mess.set_source(radio_->id());
+                    char temp_string[30];
+                    sprintf(temp_string, "%s", "light");
+                    mess.set_capability(temp_string);
+                    sprintf(temp_string, "%d", lux);
+                    mess.set_value(temp_string);
+                    debug_->debug("Contains temp %s -> %s ", mess.capability(), mess.value());
+                    radio_->send(mygateway_, mess.length(), (uint8*) & mess);
                 }
 
             } else {
                 int16 temp = em_->temp_sensor()->temperature();
                 if (temp < 100) {
-                    debug_->debug("id::%x EM_T %d ", radio_->id(), temp);
+                    debug_->debug("node::%x temperature %d ", radio_->id(), temp);
 
                 }
                 uint32 lux = em_->light_sensor()->luminance();
                 if (lux < 20000) {
-                    debug_->debug("id::%x EM_L %d ", radio_->id(), lux);
+                    debug_->debug("node::%x light %d ", radio_->id(), lux);
                 }
 
 
@@ -199,15 +207,19 @@ protected:
     virtual void handle_sensor() {
         //        debug_->debug("pir event");
         if (!is_gateway()) {
-            collectorMsg_t mess1;
-            mess1.set_collector_type_id(collectorMsg_t::PIR);
-            uint8_t pir = 1;
-            mess1.set_pir_event(&pir);
-            radio_->send(mygateway_, mess1.buffer_size(), (uint8*) & mess1);
+            collectorMsg_t mess;
+            mess.set_source(radio_->id());
+            char temp_string[30];
+            sprintf(temp_string, "%s", "pir");
+            mess.set_capability(temp_string);
+            sprintf(temp_string, "%d", 1);
+            mess.set_value(temp_string);
+            debug_->debug("Contains temp %s -> %s ", mess.capability(), mess.value());
+            radio_->send(mygateway_, mess.length(), (uint8*) & mess);
         } else {
-            isense::Time event_time = clock_->time();
+            //            isense::Time event_time = clock_->time();
             //            debug_->debug("id::%x EM_E 1 %d ", radio_->id(), event_time.sec_ * 1000 + event_time.ms_);
-            debug_->debug("id::%x EM_E 1 ", radio_->id());
+            debug_->debug("node::%x pir 1 ", radio_->id());
         }
     }
     //
@@ -238,30 +250,34 @@ protected:
     void ND_callback(uint8 event, uint16 from, uint8 len, uint8 * data) {
         if (event == nb_t::NEW_NB_BIDI) {
             if (!is_gateway()) {
-                uint16 id1, id2;
-                id1 = radio_->id();
-                id2 = from;
                 collectorMsg_t mess;
-                mess.set_collector_type_id(collectorMsg_t::LINK_UP);
-                mess.set_link(id1, id2);
-
-                radio_->send(mygateway_, mess.buffer_size(), (uint8*) & mess);
+                mess.set_source(radio_->id());
+                mess.set_target(from);
+                char temp_string[30];
+                sprintf(temp_string, "%s", "status");
+                mess.set_capability(temp_string);
+                sprintf(temp_string, "%d", 1);
+                mess.set_value(temp_string);
+                debug_->debug("Contains bidi %s -> %s ", mess.capability(), mess.value());
+                radio_->send(mygateway_, mess.length(), (uint8*) & mess);
             } else {
-                debug_->debug("id::%x LINK_UP %x ", radio_->id(), from);
+                debug_->debug("node::%x,%x status %d ", radio_->id(), from, 1);
 
             }
         } else if ((event == nb_t::LOST_NB_BIDI) || (event == nb_t::DROPPED_NB)) {
             if (!is_gateway()) {
-                uint16 id1, id2;
-                id1 = radio_->id();
-                id2 = from;
                 collectorMsg_t mess;
-                mess.set_collector_type_id(collectorMsg_t::LINK_DOWN);
-                mess.set_link(id1, id2);
-
-                radio_->send(mygateway_, mess.buffer_size(), (uint8*) & mess);
+                mess.set_source(radio_->id());
+                mess.set_target(from);
+                char temp_string[30];
+                sprintf(temp_string, "%s", "status");
+                mess.set_capability(temp_string);
+                sprintf(temp_string, "%d", 0);
+                mess.set_value(temp_string);
+                debug_->debug("Contains bidi %s -> %s ", mess.capability(), mess.value());
+                radio_->send(mygateway_, mess.length(), (uint8*) & mess);
             } else {
-                debug_->debug("id::%x LINK_DOWN %x ", radio_->id(), from);
+                debug_->debug("node::%x,%x status %d ", radio_->id(), from, 0);
             }
         }
     }
@@ -348,17 +364,17 @@ protected:
     }
 
     bool check_air_quality(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
-        if ((src_addr == 0x2c41) && (buf[0] == 0x43) && (0x1ccd == radio_->id())) {
+        if ((src_addr == 0x2c41) && (buf[0] == 0x43) && (0x9979 == radio_->id())) {
             uint8 mess[len];
             memcpy(mess, buf, len);
             mess[len - 1] = '\0';
 
             if ((buf[1] == 0x4f) && (buf[2] == 0x32)) {
-                debug_->debug("airquality::%x SVal1: %s ", src_addr, mess + 5);
+                debug_->debug("node::%x co %s ", src_addr, mess + 5);
             } else if (buf[1] == 0x4f) {
-                debug_->debug("airquality::%x SVal2: %s ", src_addr, mess + 4);
+                debug_->debug("node::%x co2 %s ", src_addr, mess + 4);
             } else if (buf[1] == 0x48) {
-                debug_->debug("airquality::%x SVal3: %s ", src_addr, mess + 5);
+                debug_->debug("node::%x ch4 %s ", src_addr, mess + 5);
             }
             return true;
         }
@@ -377,64 +393,17 @@ protected:
                 msa[3] = buf[7];
                 msa[4] = buf[6];
                 msa[5] = buf[5];
-            }
-            //                    swapped = ((num>>24)&0xff) | // move byte 3 to byte 0
-            //                    ((num << 8)&0xff0000) | // move byte 1 to byte 2
-            //                    ((num >> 8)&0xff00) | // move byte 2 to byte 1
-            //                    ((num << 24)&0xff000000 // byte 0 to byte 3
-
+            }        
             mess = (collectorMsg_t *) (msa);
             //        mess = (collectorMsg_t *) (buf + 3);
         } else {
             mess = (collectorMsg_t *) buf;
         }
         if (mess->msg_id() == collectorMsg_t::COLLECTOR_MSG_TYPE) {
-            if (mess->collector_type_id() == collectorMsg_t::TEMPERATURE) {
-                debug_->debug("id::%x EM_T %d ", src_addr, mess->get_int16());
-            } else if (mess->collector_type_id() == collectorMsg_t::LIGHT) {
-                debug_->debug("id::%x EM_L %d ", src_addr, mess->get_uint32());
-            } else if (mess->collector_type_id() == collectorMsg_t::BPRESSURE) {
-                debug_->debug("id::%x EM_P %d ", src_addr, mess->get_uint16());
-            } else if (mess->collector_type_id() == collectorMsg_t::HUMIDITY) {
-                debug_->debug("id::%x EM_H %d ", src_addr, mess->get_uint16());
-            } else if (mess->collector_type_id() == collectorMsg_t::ACCELEROMETER) {
-                debug_->debug("id::%x EM_A %d ", src_addr, mess->get_uint16());
-            } else if (mess->collector_type_id() == collectorMsg_t::CHARGE) {
-                debug_->debug("id::%x BA_C %d ", src_addr, mess->get_uint32());
-            } else if (mess->collector_type_id() == collectorMsg_t::INFRARED) {
-                debug_->debug("id::%x EM_I %d ", src_addr, mess->get_uint32());
-            } else if (mess->collector_type_id() == collectorMsg_t::PIR) {
-                debug_->debug("id::%x EM_E %d ", src_addr, mess->get_uint8());
-                debug_payload(buf, len, src_addr);
-            } else if (mess->collector_type_id() == collectorMsg_t::CO) {
-                debug_->debug("id::%x SVal1: %d ", src_addr, mess->get_uint32());
-            } else if (mess->collector_type_id() == collectorMsg_t::CH4) {
-                debug_->debug("id::%x SVal3: %d ", src_addr, mess->get_uint32());
-            } else if (mess->collector_type_id() == collectorMsg_t::LINK_UP) {
-                debug_->debug("id::%x LINK_UP %x ", mess->link_from(), mess->link_to());
-            } else if (mess->collector_type_id() == collectorMsg_t::LINK_DOWN) {
-                debug_->debug("id::%x LINK_DOWN %x ", mess->link_from(), mess->link_to());
-            } else if (mess->collector_type_id() == collectorMsg_t::ROOMLIGHTS) {
-                debug_->debug("id::%x RL%d %d ", src_addr, mess->get_zone(), mess->get_status());
-            } else if (mess->collector_type_id() == collectorMsg_t::CHAIR) {
-                debug_->debug("id::%x CS %d ", src_addr, mess->get_uint8());
-            } else if (mess->collector_type_id() == collectorMsg_t::TTEST) {
-                debug_->debug("id::%x TEST 1 ", src_addr);
-            } else if (mess->collector_type_id() == collectorMsg_t::TEMPERATURE_ARDUINO) {
-                debug_->debug("id::%x EM_T %d ", src_addr, mess->get_uint8());
-            } else if (mess->collector_type_id() == collectorMsg_t::DESCRIPTION) {
-                debug_payload(buf, len, src_addr);
-                char buffer[100];
-                int bytes_written = 0;
-                bytes_written += sprintf(buffer + bytes_written, "id::%x SELF ", src_addr);
-                for (size_t i = 0; i < buf[5]; i++) {
-                    bytes_written += sprintf(buffer + bytes_written, "%d,", buf[5 + 1 + i]);
-                }
-                bytes_written += sprintf(buffer + bytes_written, " ");
-                buffer[bytes_written] = '\0';
-                debug_->debug("%s", buffer);
+            if (mess->target() == 0xffff) {
+                debug_->debug("node::%x %s %s ", mess->source(), mess->capability(), mess->value());
             } else {
-                //debug_payload(buf, len, src_addr);
+                debug_->debug("node::%x,%x %s %s ", mess->source(), mess->target(), mess->capability(), mess->value());
             }
         }
     }
@@ -451,6 +420,7 @@ private:
             case 0xc7a: //0.2
             case 0x99ad: //3,1
             case 0x8978: //1.1
+            case 0x9979: //1.1
                 return true;
             default:
                 return false;
