@@ -28,9 +28,9 @@ using namespace isense;
 //#define USE_LED
 #define USE_ECHO
 #define USE_SENSORS
-//#define EM
-#define SM
-//#define BM
+#define EM
+//#define SM
+#define BM
 
 #ifdef USE_LED
 #include <isense/modules/core_module/core_module.h>
@@ -355,7 +355,7 @@ boot(void) {
             // set the estimated battery charge
             sm_->set_battery_charge(charge);
             // output voltage and estimated charge
-            //os().debug("Set estimated charge of %d uAh, voltage is %d mV", charge, bs.voltage);
+            os().debug("Set estimated charge of %d uAh, voltage is %d mV", charge, bs.voltage);
         }
     }
 #endif
@@ -525,21 +525,22 @@ execute(void* userdata) {
 
 
             if (bs.charge < 50000) {
-                duty_cycle_ = 1; // 0.1%
+                duty_cycle_ = 1; //0.1%
             } else
                 if (bs.capacity < 1000000) //1 Ah or less
             {
-                duty_cycle_ = 100;
+                duty_cycle_ = 100; //10%
             } else
                 if (bs.capacity < 3000000) //3Ah or less
             {
-                duty_cycle_ = 300; // 30%
+                duty_cycle_ = 300; //30%
             } else
                 if (bs.capacity < 5000000) {
-                duty_cycle_ = 650; // 50% 500
+                duty_cycle_ = 650; //50% 500
             } else {
-                duty_cycle_ = 950; // 88% 880
+                duty_cycle_ = 950; //88% 880
             }
+            os().debug("duty cycle = %d",duty_cycle_);
             // add task to allow sleeping again
             os().add_task_in(duty_cycle_ * 60, this, (void*) TASK_SLEEP);
 

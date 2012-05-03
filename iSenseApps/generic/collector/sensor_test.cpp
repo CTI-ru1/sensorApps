@@ -114,7 +114,7 @@ public:
 
 
         radio_->reg_recv_callback<Application, &Application::receive > (this);
-        radio_->set_channel(13);
+        radio_->set_channel(12);
 
         uart_->reg_read_callback<Application, &Application::handle_uart_msg > (this);
         uart_->enable_serial_comm();
@@ -170,7 +170,7 @@ public:
                     mess.set_capability(temp_string);
                     sprintf(temp_string, "%d", lux);
                     mess.set_value(temp_string);
-                    debug_->debug("Contains temp %s -> %s ", mess.capability(), mess.value());
+                    debug_->debug("Contains temp %s -> %s to %d ", mess.capability(), mess.value(), mess.msg_id());
                     radio_->send(mygateway_, mess.length(), (uint8*) & mess);
                 }
 
@@ -214,7 +214,7 @@ protected:
             mess.set_capability(temp_string);
             sprintf(temp_string, "%d", 1);
             mess.set_value(temp_string);
-            debug_->debug("Contains temp %s -> %s ", mess.capability(), mess.value());
+            debug_->debug("Contains temp %s -> %s to %x", mess.capability(), mess.value(), mygateway_);
             radio_->send(mygateway_, mess.length(), (uint8*) & mess);
         } else {
             //            isense::Time event_time = clock_->time();
@@ -349,17 +349,17 @@ protected:
     }
 
     bool check_gateway(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
-        if ((len == 10) && (buf[0] == 0)) {
-            bool sGmsg = true;
-            for (int i = 1; i < 10; i++) {
-                sGmsg = sGmsg && (buf[i] == i);
-            }
-            if (sGmsg) {
-                mygateway_ = src_addr;
-                //                debug_->debug("mygateway_->%x", mygateway_);
-                return true;
-            }
-        }
+        //        if ((len == 10) && (buf[0] == 0)) {
+        //            bool sGmsg = true;
+        //            for (int i = 1; i < 10; i++) {
+        //                sGmsg = sGmsg && (buf[i] == i);
+        //            }
+        //            if (sGmsg) {
+        //                mygateway_ = src_addr;
+        //                //                debug_->debug("mygateway_->%x", mygateway_);
+        //                return true;
+        //            }
+        //        }
         return false;
     }
 
@@ -386,25 +386,29 @@ protected:
 
         if ((buf[0] == 0x7f) || (buf[1] == 0x69) || (buf[2] == 112)) {
 
-            uint8 msa[len - 3];
-            memcpy(msa, buf + 3, len);
-            if (len > 6) {
-                msa[2] = buf[8];
-                msa[3] = buf[7];
-                msa[4] = buf[6];
-                msa[5] = buf[5];
-            }        
-            mess = (collectorMsg_t *) (msa);
+            //            uint8 msa[len - 3];
+            //            memcpy(msa, buf + 3, len);
+            //            if (len > 6) {
+            //                msa[2] = buf[8];
+            //                msa[3] = buf[7];
+            //                msa[4] = buf[6];
+            //                msa[5] = buf[5];
+            //            }        
+            mess = (collectorMsg_t *) (buf + 3);
             //        mess = (collectorMsg_t *) (buf + 3);
         } else {
             mess = (collectorMsg_t *) buf;
         }
         if (mess->msg_id() == collectorMsg_t::COLLECTOR_MSG_TYPE) {
+            if ((src_addr == 0xcb5) || (src_addr == 0x786a)) {
+                debug_payload((uint8_t*) mess, len, src_addr);
+            }
             if (mess->target() == 0xffff) {
                 debug_->debug("node::%x %s %s ", mess->source(), mess->capability(), mess->value());
             } else {
                 debug_->debug("node::%x,%x %s %s ", mess->source(), mess->target(), mess->capability(), mess->value());
             }
+
         }
     }
 
@@ -420,7 +424,6 @@ private:
             case 0xc7a: //0.2
             case 0x99ad: //3,1
             case 0x8978: //1.1
-            case 0x9979: //1.1
                 return true;
             default:
                 return false;

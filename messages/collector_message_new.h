@@ -26,17 +26,20 @@ namespace wiselib {
         };
 
         enum data_positions {
-            MSG_ID_POS = 0, // message id position inside the message [uint8]            
-            CAPABILITY_LEN_POS = 1,
-            VALUE_LEN_POS = 2,
-            SOURCE_NODE = 3,
-            TARGET_NODE = 5,
-            CAPABILITY_STR_POS = 7
+            MSG_ID_POS = 3, // message id position inside the message [uint8]            
+            CAPABILITY_LEN_POS = 4,
+            VALUE_LEN_POS = 5,
+            SOURCE_NODE = 6,
+            TARGET_NODE = 8,
+            CAPABILITY_STR_POS = 10
         };
 
         // --------------------------------------------------------------------
 
         CollectorMsg() {
+            buffer[0]=0x7f;
+            buffer[1]=0x69;
+            buffer[2]=0x70;
             set_msg_id(COLLECTOR_MSG_TYPE);
             set_source(0xffff);
             set_target(0xffff);
