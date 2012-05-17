@@ -263,6 +263,8 @@ protected:
         if (event == nb_t::NEW_NB_BIDI) {
             if (!is_gateway()) {
                 send_reading(from, "status", 1);
+
+                send_reading(from, "lqi", nb_.get_lqi(from));
                 //                collectorMsg_t mess;
                 //                mess.set_source(radio_->id());
                 //                mess.set_target(from);
