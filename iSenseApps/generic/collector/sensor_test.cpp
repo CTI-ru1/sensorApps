@@ -9,7 +9,7 @@
 #include <isense/modules/environment_module/temp_sensor.h>
 #include <isense/modules/environment_module/light_sensor.h>
 #include <isense/modules/security_module/pir_sensor.h>
-
+#include <isense/modules/cc_weather_module/ms55xx.h>
 
 typedef wiselib::OSMODEL Os;
 
@@ -36,6 +36,13 @@ typedef Os::TxRadio::block_data_t block_data_t;
 #define REVISION 4
 
 #define REPORTING_INTERVAL 180
+
+#undef WEATHER_MODULE
+#undef ENVIRONMENTAL_MODULE
+#undef SECURITY_MODULE
+//#define WEATHER_MODULE
+#define ENVIRONMENTAL_MODULE
+#define SECURITY_MODULE
 
 class Application
 :
@@ -78,6 +85,7 @@ public:
      * @param value pointer to os
      */
     void init(Os::AppMainParameter& value) {
+        ospointer = &value;
         radio_ = &wiselib::FacetProvider<Os, Os::TxRadio>::get_facet(value);
         timer_ = &wiselib::FacetProvider<Os, Os::Timer>::get_facet(value);
         debug_ = &wiselib::FacetProvider<Os, Os::Debug>::get_facet(value);
@@ -89,7 +97,52 @@ public:
 
         mygateway_ = 0xffff;
 
+#ifdef WEATHER_MODULE
+        init_weather_module(value);
+#endif
+#ifdef ENVIRONMENTAL_MODULE
+        init_environmental_module(value);
+#endif
+#ifdef SECURITY_MODULE
+        init_security_module(value);
+#endif
 
+
+
+
+        radio_->reg_recv_callback<Application, &Application::receive > (this);
+        radio_->set_channel(12);
+
+        uart_->reg_read_callback<Application, &Application::handle_uart_msg > (this);
+        uart_->enable_serial_comm();
+
+        //        debug_->debug("INIT ");
+
+        nb_.init(*radio_, *clock_, *timer_, *debug_, 2000, 16000, 250, 255);
+        nb_.enable();
+        nb_. reg_event_callback<Application, &Application::ND_callback > ((uint8) 2, nb_t::NEW_NB | nb_t::NEW_NB_BIDI | nb_t::LOST_NB_BIDI | nb_t::DROPPED_NB, this);
+
+#ifdef WEATHER_MODULE
+        timer_->set_timer<Application, &Application::read_weather_sensors > (10000, this, (void*) 0);
+#endif
+#ifdef ENVIRONMENTAL_MODULE
+        timer_->set_timer<Application, &Application::read_environmental_sensors > (10000, this, (void*) 0);
+#endif
+        if (is_gateway()) {
+            // register task to be called in a minute for periodic sensor readings
+            timer_->set_timer<Application, &Application::broadcast_gateway > (1000, this, (void*) 0);
+            //            timer_->set_timer<Application, &Application::execute > (5000, this, (void*) TASK_TEST);
+        }
+    }
+    // --------------------------------------------------------------------
+
+    void init_weather_module(Os::AppMainParameter& value) {
+        ms_ = new isense::Ms55xx(value);
+
+
+    }
+
+    void init_environmental_module(Os::AppMainParameter& value) {
         em_ = new isense::EnvironmentModule(value);
         if (em_ != NULL) {
             em_->enable(true);
@@ -104,7 +157,9 @@ public:
             }
         }
 
+    }
 
+    void init_security_module(Os::AppMainParameter& value) {
         pir_ = new isense::PirSensor(value);
         pir_->set_sensor_handler(this);
         pir_->set_pir_sensor_int_interval(2000);
@@ -120,38 +175,16 @@ public:
         //            accelerometer_->set_handler(this);
         //            accelerometer_->enable();
         //        }
-
-
-        radio_->reg_recv_callback<Application, &Application::receive > (this);
-        radio_->set_channel(12);
-
-        uart_->reg_read_callback<Application, &Application::handle_uart_msg > (this);
-        uart_->enable_serial_comm();
-
-        //        debug_->debug("INIT ");
-
-        nb_.init(*radio_, *clock_, *timer_, *debug_, 2000, 16000, 250, 255);
-        nb_.enable();
-        nb_. reg_event_callback<Application, &Application::ND_callback > ((uint8) 2, nb_t::NEW_NB | nb_t::NEW_NB_BIDI | nb_t::LOST_NB_BIDI | nb_t::DROPPED_NB, this);
-
-
-        timer_->set_timer<Application, &Application::read_sensors > (10000, this, (void*) 0);
-        if (is_gateway()) {
-            // register task to be called in a minute for periodic sensor readings
-            timer_->set_timer<Application, &Application::broadcast_gateway > (1000, this, (void*) 0);
-            //            timer_->set_timer<Application, &Application::execute > (5000, this, (void*) TASK_TEST);
-        }
     }
-    // --------------------------------------------------------------------
 
     /**
      * Periodically read sensor values and report them
      * @param userdata unused
      */
-    void read_sensors(void* userdata) {
+    void read_environmental_sensors(void* userdata) {
         // Get the Temperature and Luminance from sensors and debug them
         if (radio_->id() != 0xddba) {
-            timer_->set_timer<Application, &Application::read_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
+            timer_->set_timer<Application, &Application::read_environmental_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
         }
 
         if (!is_gateway()) {
@@ -197,6 +230,32 @@ public:
 
         }
 
+    }
+
+    /**
+     * Periodically read sensor values from weather module and report them
+     * @param userdata unused
+     */
+    void read_weather_sensors(void* userdata) {
+        // Get the Temperature and Luminance from sensors and debug them
+        if (radio_->id() != 0xddba) {
+            timer_->set_timer<Application, &Application::read_weather_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
+        }
+
+        ms_ = new isense::Ms55xx(*ospointer);
+        ms_->reset();
+
+
+        int16 temp = ms_->get_temperature();
+        int16 bpressure = ms_->read_pressure();
+        if (!is_gateway()) {
+            send_reading(0xffff, "temperature", temp / 10);
+
+            send_reading(0xffff, "barometricpressure", bpressure / 10);
+        } else {
+            debug_->debug("node::%x temperature %d ", radio_->id(), temp / 10);
+            debug_->debug("node::%x barometricpressure %d ", radio_->id(), bpressure / 10);
+        }
     }
 
     /**
@@ -444,6 +503,19 @@ private:
         radio_->send(mygateway_, mess.length(), (uint8*) & mess);
     }
 
+    void send_reading(node_id_t destination, const char * capability, int value, int decimals) {
+        collectorMsg_t mess;
+        mess.set_source(radio_->id());
+        mess.set_target(destination);
+        char temp_string[30];
+        sprintf(temp_string, "%s", capability);
+        mess.set_capability(temp_string);
+        sprintf(temp_string, "%d.%d", value, decimals);
+        mess.set_value(temp_string);
+        debug_->debug("Contains bidi %s -> %s ", mess.capability(), mess.value());
+        radio_->send(mygateway_, mess.length(), (uint8*) & mess);
+    }
+
     bool is_gateway() {
         switch (radio_->id()) {
             case 0x6699: //2.3
@@ -453,6 +525,7 @@ private:
             case 0xc7a: //0.2
             case 0x99ad: //3,1
             case 0x8978: //1.1
+//            case 0x181: //1.1
                 return true;
             default:
                 return false;
@@ -488,10 +561,11 @@ private:
     node_id_t mygateway_;
     nb_t nb_;
     bool pir_sensor_;
-
+    Os::AppMainParameter* ospointer;
     isense::EnvironmentModule* em_;
     //    isense::LisAccelerometer* accelerometer_;
     isense::PirSensor* pir_;
+    isense::Ms55xx* ms_;
     isense::CoreModule* cm_;
 
     Os::TxRadio::self_pointer_t radio_;
