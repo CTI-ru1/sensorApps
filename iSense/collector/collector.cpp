@@ -18,7 +18,7 @@ typedef wiselib::OSMODEL Os;
 typedef wiselib::Echo<Os, Os::TxRadio, Os::Timer, Os::Debug> nb_t;
 
 //MESSAGE_TYPES
-#include "../../../messages/collector_message_new.h"
+#include "../../messages/collector_message_new.h"
 typedef wiselib::CollectorMsg<Os, Os::TxRadio> collectorMsg_t;
 typedef wiselib::BroadcastMsg<Os, Os::TxRadio> broadcastMsg_t;
 
@@ -47,7 +47,6 @@ typedef Os::TxRadio::block_data_t block_data_t;
 class Application
 :
 public isense::SensorHandler,
-//public isense::BufferDataHandler,
 public isense::Int8DataHandler,
 public isense::Uint32DataHandler {
 public:
@@ -192,28 +191,10 @@ public:
             int16 temp = em_->temp_sensor()->temperature();
             if (temp < 100) {
                 send_reading(0xffff, "temperature", temp);
-                //                collectorMsg_t mess;
-                //                mess.set_source(radio_->id());
-                //                char temp_string[30];
-                //                sprintf(temp_string, "%s", "temperature");
-                //                mess.set_capability(temp_string);
-                //                sprintf(temp_string, "%d", temp);
-                //                mess.set_value(temp_string);
-                //                //                debug_->debug("Contains temp %s -> %s %x", mess.capability(), mess.value(), mygateway_);
-                //                radio_->send(mygateway_, mess.length(), (uint8*) & mess);
             }
             uint32 lux = em_->light_sensor()->luminance();
             if (lux < 20000) {
                 send_reading(0xffff, "light", lux);
-                //                collectorMsg_t mess;
-                //                mess.set_source(radio_->id());
-                //                char temp_string[30];
-                //                sprintf(temp_string, "%s", "light");
-                //                mess.set_capability(temp_string);
-                //                sprintf(temp_string, "%d", lux);
-                //                mess.set_value(temp_string);
-                //                //                debug_->debug("Contains temp %s -> %s to %d ", mess.capability(), mess.value(), mess.msg_id());
-                //                radio_->send(mygateway_, mess.length(), (uint8*) & mess);
             }
 
         } else {
@@ -278,38 +259,10 @@ protected:
         //        debug_->debug("pir event");
         if (!is_gateway()) {
             send_reading(0xffff, "pir", 1);
-            //            collectorMsg_t mess;
-            //            mess.set_source(radio_->id());
-            //            char temp_string[30];
-            //            sprintf(temp_string, "%s", "pir");
-            //            mess.set_capability(temp_string);
-            //            sprintf(temp_string, "%d", 1);
-            //            mess.set_value(temp_string);
-            //            //            debug_->debug("Contains temp %s -> %s to %x", mess.capability(), mess.value(), mygateway_);
-            //            radio_->send(mygateway_, mess.length(), (uint8*) & mess);
         } else {
-            //            isense::Time event_time = clock_->time();
-            //            debug_->debug("id::%x EM_E 1 %d ", radio_->id(), event_time.sec_ * 1000 + event_time.ms_);
             debug_->debug("node::%x pir 1 ", radio_->id());
         }
     }
-    //
-    //    /**
-    //     * Handles a new accelerometer event
-    //     * @param acceleration in 3 axis
-    //     */
-    //    virtual void handle_buffer_data(isense::BufferData* data) {
-    //        if (!is_gateway()) {
-    //            collectorMsg_t mess1;
-    //            mess1.set_collector_type_id(collectorMsg_t::ACCELEROMETER);
-    //            //            radio_->send(mygateway_, mess1.buffer_size(), (uint8*) & mess1);
-    //        } else {
-    //            debug_->debug("id::%x EM_A 1 ", radio_->id());
-    //        }
-    //
-    //        //return from continuous mode to threshold mode
-    //        accelerometer_->set_mode(MODE_THRESHOLD);
-    //    }
 
     /**
      * Handles a new neighborhood event
@@ -324,16 +277,6 @@ protected:
                 send_reading(from, "status", 1);
 
                 send_reading(from, "lqi", nb_.get_lqi(from));
-                //                collectorMsg_t mess;
-                //                mess.set_source(radio_->id());
-                //                mess.set_target(from);
-                //                char temp_string[30];
-                //                sprintf(temp_string, "%s", "status");
-                //                mess.set_capability(temp_string);
-                //                sprintf(temp_string, "%d", 1);
-                //                mess.set_value(temp_string);
-                //                //                debug_->debug("Contains bidi %s -> %s ", mess.capability(), mess.value());
-                //                radio_->send(mygateway_, mess.length(), (uint8*) & mess);
             } else {
                 debug_->debug("node::%x,%x status %d ", radio_->id(), from, 1);
 
@@ -341,16 +284,6 @@ protected:
         } else if ((event == nb_t::LOST_NB_BIDI) || (event == nb_t::DROPPED_NB)) {
             if (!is_gateway()) {
                 send_reading(from, "status", 0);
-                //                collectorMsg_t mess;
-                //                mess.set_source(radio_->id());
-                //                mess.set_target(from);
-                //                char temp_string[30];
-                //                sprintf(temp_string, "%s", "status");
-                //                mess.set_capability(temp_string);
-                //                sprintf(temp_string, "%d", 0);
-                //                mess.set_value(temp_string);
-                //                //                debug_->debug("Contains bidi %s -> %s ", mess.capability(), mess.value());
-                //                radio_->send(mygateway_, mess.length(), (uint8*) & mess);
             } else {
                 debug_->debug("node::%x,%x status %d ", radio_->id(), from, 0);
             }
@@ -363,13 +296,6 @@ protected:
      * @param mess payload buffer
      */
     void handle_uart_msg(Os::Uart::size_t len, Os::Uart::block_data_t *mess) {
-        //if (mess[0] == 9) {
-        //    cm_->led_on();
-        //} else if (mess[0] == 10) {
-        //    cm_->led_off();
-        //} else {
-
-
         node_id_t node;
         memcpy(&node, mess, sizeof (node_id_t));
         radio_->send(node, len - 2, (uint8*) mess + 2);
@@ -383,10 +309,6 @@ protected:
             buffer[bytes_written] = '\0';
             debug_->debug("FORWARDING to %x %s", node, buffer);
         }
-        //}
-
-
-
     }
 
     /**
@@ -408,7 +330,6 @@ protected:
                 debug_->debug("case1");
                 return;
             }
-
             if (check_air_quality(src_addr, len, buf)) {
                 debug_->debug("check_air_quality");
                 return;
@@ -416,7 +337,6 @@ protected:
 
             check_collector(src_addr, len, buf);
         }
-
     }
 
     bool check_led(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
@@ -432,7 +352,6 @@ protected:
                     return true;
                 }
             }
-
         }
         return false;
     }
@@ -483,7 +402,6 @@ protected:
             } else {
                 debug_->debug("node::%x,%x %s %s ", mess->source(), mess->target(), mess->capability(), mess->value());
             }
-
         }
     }
 
@@ -525,7 +443,7 @@ private:
             case 0xc7a: //0.2
             case 0x99ad: //3,1
             case 0x8978: //1.1
-//            case 0x181: //1.1
+                //            case 0x181: //1.1
                 return true;
             default:
                 return false;

@@ -12,7 +12,7 @@ all: isense
 # all: tinyos-tossim
 # all: tinyos-micaz
 
-export APP_SRC=sensor_test.cpp
-export BIN_OUT=sensor_test
+export APP_SRC=collector.cpp
+export BIN_OUT=collector
 
 include ../Makefile
