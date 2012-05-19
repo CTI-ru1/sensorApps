@@ -15,4 +15,4 @@ all: isense
 export APP_SRC=sensor_test.cpp
 export BIN_OUT=sensor_test
 
-include ../Makefile
+include ../Makefiles/Makefile

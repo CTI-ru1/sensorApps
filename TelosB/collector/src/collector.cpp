@@ -31,7 +31,15 @@
 
 using namespace isense;
 
-class iSenseDemoApplication :
+/**
+ * An application that collects periodically readings
+ * from 
+ * <a href='http://www.willow.co.uk/html/telosb_mote_platform.html'>
+ * TelosB : Light,Infrared,Humidity and Temperature sensors </a>
+ * and reports them to the 
+ * <a href='https://github.com/organizations/Uberdust'> Uberdust Backend</a>
+ */
+class TelosBCollectorApp :
 public isense::Application,
 public isense::Receiver,
 public isense::Sender,
@@ -40,32 +48,68 @@ public isense::TimeoutHandler,
 public isense::ButtonHandler,
 public isense::UartPacketHandler {
 public:
-    iSenseDemoApplication(isense::Os& os);
+    /**
+     * Constructor
+     * @param os a pointer to the os
+     */
+    TelosBCollectorApp(isense::Os& os);
 
-    ~iSenseDemoApplication();
+    /**
+     * Destructor
+     */
+    ~TelosBCollectorApp();
 
-    ///From isense::Application
+    /**
+     * Boot function executed when device is powered
+     */
     void boot(void);
 
-    ///From isense::ButtonHandler
+    /**
+     * Executed when a button is pressed
+     * @param button the button pressed
+     */
     void button_down(uint8 button);
 
-    ///From isense::ButtonHandler
+    /**
+     * Executed when a button is released
+     * @param button the button released
+     */
     void button_up(uint8 button);
 
-    ///From isense::Receiver
+    /**
+     * Called when a new message is received.
+     * @param len length of the payload received
+     * @param buf a buffer containing the payload
+     * @param src_addr the source of the payload
+     * @param dest_addr the destination of the payload
+     * @param signal_strength the strenght of the received signal
+     * @param signal_quality the quality of the received signal
+     * @param seq_no sequence number of the message
+     * @param interface id of the radio received from
+     * @param time the time of the receive event
+     */
     void receive(uint8 len, const uint8 * buf, ISENSE_RADIO_ADDR_TYPE src_addr, ISENSE_RADIO_ADDR_TYPE dest_addr, uint16 signal_strength, uint16 signal_quality, uint8 seq_no, uint8 interface, Time time);
 
-    ///From isense::Sender
     void confirm(uint8 state, uint8 tries, isense::Time time);
 
-    ///From isense::Task
+    /**
+     * Executed preriodically to report new readings to the backend
+     * @param userdata unused
+     */
     void execute(void* userdata);
 
-    ///From isense::TimeoutHandler
+    /**
+     * unused
+     * @param userdata unused
+     */
     void timeout(void* userdata);
 
-    ///From isense::UartPacketHandler
+    /**
+     * Handler for uart messages
+     * @param type the type of the message
+     * @param buf the buffer containing the data
+     * @param length the size of the payload
+     */
     void handle_uart_packet(uint8 type, uint8* buf, uint8 length);
 
 private:
@@ -74,22 +118,22 @@ private:
 
 //----------------------------------------------------------------------------
 
-iSenseDemoApplication::
-iSenseDemoApplication(isense::Os& os)
+TelosBCollectorApp::
+TelosBCollectorApp(isense::Os& os)
 : isense::Application(os),
 telos(NULL) {
 }
 
 //----------------------------------------------------------------------------
 
-iSenseDemoApplication::
-~iSenseDemoApplication() {
+TelosBCollectorApp::
+~TelosBCollectorApp() {
 }
 
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 handle_uart_packet(uint8 type, uint8 * mess, uint8 length) {
 
 }
@@ -97,7 +141,7 @@ handle_uart_packet(uint8 type, uint8 * mess, uint8 length) {
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 boot(void) {
     os().debug("App::boot ");
 
@@ -110,7 +154,7 @@ boot(void) {
 
     os().debug("my id is %x", os().id());
 
-//    telos->add_button_handler(this);
+    //    telos->add_button_handler(this);
 
     os().add_task_in(Time(5, 0), this, NULL);
 
@@ -124,14 +168,14 @@ boot(void) {
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 button_down(uint8 button) {
     telos->led_on(0);
     os().debug("BUTTON");
 }
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 button_up(uint8 button) {
     telos->led_off(0);
 }
@@ -139,7 +183,7 @@ button_up(uint8 button) {
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 execute(void* userdata) {
     telos->led_on(1);
 
@@ -149,7 +193,7 @@ execute(void* userdata) {
     int16 light = telos->light();
     int16 inflight = telos->infrared();
 
-    os().debug("node::%x temperature %d ", os().id(), temp/10);
+    os().debug("node::%x temperature %d ", os().id(), temp / 10);
     os().debug("node::%x humidity %d ", os().id(), humid);
     os().debug("node::%x ir %d ", os().id(), inflight);
     os().debug("node::%x light %d ", os().id(), light);
@@ -161,21 +205,21 @@ execute(void* userdata) {
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 receive(uint8 len, const uint8* buf, ISENSE_RADIO_ADDR_TYPE src_addr, ISENSE_RADIO_ADDR_TYPE dest_addr, uint16 signal_strength, uint16 signal_quality, uint8 seq_no, uint8 interface, Time time) {
 }
 
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 confirm(uint8 state, uint8 tries, isense::Time time) {
 }
 
 //----------------------------------------------------------------------------
 
 void
-iSenseDemoApplication::
+TelosBCollectorApp::
 timeout(void* userdata) {
 }
 
@@ -184,7 +228,7 @@ timeout(void* userdata) {
 /**
  */
 isense::Application * application_factory(isense::Os & os) {
-    return new iSenseDemoApplication(os);
+    return new TelosBCollectorApp(os);
 }
 
 

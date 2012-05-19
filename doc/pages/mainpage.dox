@@ -1,0 +1,42 @@
+/** \mainpage Uberudst - sensorApps
+
+\section main_intro Introduction
+
+\section isense iSense Applications
+
+For the iSense  platform we use <a href='https://github.com/ibr-alg/wiselib/wiki/'>Wiselib</a> a library for applications to achieve connectivity and between gateway and Wireless devices. All gateway devices operate as intermediates and deliver to the back-end the sensor readings of the wireless devices.
+
+A new <a href='https://github.com/ibr-alg/wiselib/wiki/'>Wiselib</a> message is defined and used to report back the Sensor Readings. Each sensor type uses a different SensorID field in the message header, followed by the SensorValue that may be of a variable size.
+
+\subsection isense_env Environmental Module 
+<ul>
+<li>Temperature
+<li>Visible light Luminosity
+</ul>
+\subsection isense_pir Security Module
+<ul>
+<li>Movement Pir Sensor
+</ul>
+\subsection isense_weather Weather Module
+<ul>
+<li>Temperature
+<li>Barometric Pressure
+</ul> 
+\subsection wsn Wireless Network statistics gathering 
+A second applications responsible for detecting the connectivity between the iSense Sensors also operates simultaneously and reports in the same way network changes ( Bidirectional Link Up and Down ).
+
+\section telosb TelosB Applications
+
+The TelosB application <a href='https://github.com/Uberdust/sensorApps/blob/master/TelosB/collector/src/collector.cpp'>(see here)</a> uses the iSense for TelosB Operating System.
+
+<ul>
+<li>Temperature
+<li>Visible light Luminosity
+<li>Infrared light Luminosity
+<li>Relative Humidity
+</ul>
+\section arduino Arduino Applications
+
+\section more More Info
+More information are available on <a href='https://github.com/Uberdust/webapp/wiki'>UberdustWiki</a>
+*/

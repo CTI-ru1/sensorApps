@@ -15,4 +15,4 @@ all: isense
 export APP_SRC=collector.cpp
 export BIN_OUT=collector
 
-include ../Makefile
+include ../Makefiles/Makefile

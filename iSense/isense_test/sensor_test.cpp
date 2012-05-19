@@ -3,36 +3,29 @@
 #include "util/pstl/map_static_vector.h"
 #include "util/pstl/static_string.h"
 
-//ISENSE SENSORS
+//used to blink the led
 #include <isense/modules/core_module/core_module.h>
-#include <isense/modules/environment_module/environment_module.h>
-#include <isense/modules/environment_module/temp_sensor.h>
-#include <isense/modules/environment_module/light_sensor.h>
-#include <isense/modules/security_module/pir_sensor.h>
-
 
 typedef wiselib::OSMODEL Os;
 
-//MESSAGE_TYPES
-#include "./collector_message.h"
+//messages used to report a reading and receive the GatewayBeacons
+#include "../../messages/collector_message_new.h"
 typedef wiselib::CollectorMsg<Os, Os::TxRadio> collectorMsg_t;
-typedef wiselib::BroadcastMsg<Os, Os::TxRadio> broadcastMsg_t;
+#include "../../messages/gateway_beacon_message.h"
+typedef wiselib::GatewayBeaconMsg<Os, Os::TxRadio> broadcastMsg_t;
+
 
 //TYPEDEFS
 typedef Os::TxRadio::node_id_t node_id_t;
 typedef Os::TxRadio::block_data_t block_data_t;
 
 //EVENT IDS
-#define TASK_SLEEP 1
-#define TASK_WAKE 2
 #define TASK_READ_SENSORS 2
-#define TASK_SET_LIGHT_THRESHOLD 3
-#define TASK_BROADCAST_GATEWAY 4
-#define TASK_TEST 5
+
 
 #define REPORTING_INTERVAL 60
 
-class Application {
+class iSenseTestApp {
 public:
 
     //--------------------------------------------------------------
@@ -75,12 +68,12 @@ public:
 
 
 
-        radio_->reg_recv_callback<Application, &Application::receive > (this);
+        radio_->reg_recv_callback<iSenseTestApp, &iSenseTestApp::receive > (this);
         radio_->set_channel(12);
 
 
 
-        timer_->set_timer<Application, &Application::execute > (10000, this, (void*) TASK_READ_SENSORS);
+        timer_->set_timer<iSenseTestApp, &iSenseTestApp::execute > (10000, this, (void*) TASK_READ_SENSORS);
 
     }
     // --------------------------------------------------------------------
@@ -93,10 +86,8 @@ public:
 
         // Get the Temperature and Luminance from sensors and debug them
         if ((long) userdata == TASK_READ_SENSORS) {
-            timer_->set_timer<Application, &Application::execute > (REPORTING_INTERVAL * 1000, this, (void*) TASK_READ_SENSORS);
-            collectorMsg_t mess;
-            mess.set_collector_type_id(collectorMsg_t::TTEST);
-            radio_->send(mygateway_, mess.buffer_size(), (uint8*) & mess);
+            timer_->set_timer<iSenseTestApp, &iSenseTestApp::execute > (REPORTING_INTERVAL * 1000, this, (void*) TASK_READ_SENSORS);
+            send_reading(0xffff, "test", 1);
 
         }
     }
@@ -157,7 +148,18 @@ private:
         debug_->debug("%s", buffer);
     }
 
-
+    void send_reading(node_id_t destination, const char * capability, int value) {
+        collectorMsg_t mess;
+        mess.set_source(radio_->id());
+        mess.set_target(destination);
+        char temp_string[30];
+        sprintf(temp_string, "%s", capability);
+        mess.set_capability(temp_string);
+        sprintf(temp_string, "%d", value);
+        mess.set_value(temp_string);
+        debug_->debug("Contains bidi %s -> %s ", mess.capability(), mess.value());
+        radio_->send(mygateway_, mess.length(), (uint8*) & mess);
+    }
 
     node_id_t mygateway_;
     bool led;
@@ -172,7 +174,7 @@ private:
 
 };
 
-wiselib::WiselibApplication<Os, Application> application;
+wiselib::WiselibApplication<Os, iSenseTestApp> application;
 // --------------------------------------------------------------------------
 
 void application_main(Os::AppMainParameter& value) {

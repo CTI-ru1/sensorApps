@@ -3,24 +3,39 @@
 #include "util/pstl/map_static_vector.h"
 #include "util/pstl/static_string.h"
 
-//ISENSE SENSORS
+#undef WEATHER_COLLECTOR
+#undef ENVIRONMENTAL_COLLECTOR
+#undef SECURITY_COLLECTOR
+
+//Uncomment to enable the isense module
+#define ENVIRONMENTAL_COLLECTOR
+#define SECURITY_COLLECTOR
+//#define WEATHER_COLLECTOR
+
 #include <isense/modules/core_module/core_module.h>
+#ifdef ENVIRONMENTAL_COLLECTOR
 #include <isense/modules/environment_module/environment_module.h>
 #include <isense/modules/environment_module/temp_sensor.h>
 #include <isense/modules/environment_module/light_sensor.h>
+#endif
+#ifdef SECURITY_COLLECTOR
 #include <isense/modules/security_module/pir_sensor.h>
+#endif
+#ifdef WEATHER_COLLECTOR
 #include <isense/modules/cc_weather_module/ms55xx.h>
+#endif
 
 typedef wiselib::OSMODEL Os;
 
-//ND
+//neighbor discovery algorithm
 #include "algorithms/neighbor_discovery/echo.h"
 typedef wiselib::Echo<Os, Os::TxRadio, Os::Timer, Os::Debug> nb_t;
 
-//MESSAGE_TYPES
+//reporting message
 #include "../../messages/collector_message_new.h"
 typedef wiselib::CollectorMsg<Os, Os::TxRadio> collectorMsg_t;
-typedef wiselib::BroadcastMsg<Os, Os::TxRadio> broadcastMsg_t;
+#include "../../messages/gateway_beacon_message.h"
+typedef wiselib::GatewayBeaconMsg<Os, Os::TxRadio> broadcastMsg_t;
 
 //TYPEDEFS
 typedef Os::TxRadio::node_id_t node_id_t;
@@ -35,52 +50,63 @@ typedef Os::TxRadio::block_data_t block_data_t;
 #define TASK_TEST 5
 #define REVISION 4
 
+//defines every how many seconds new readings will be reported to the gateway
 #define REPORTING_INTERVAL 180
 
-#undef WEATHER_MODULE
-#undef ENVIRONMENTAL_MODULE
-#undef SECURITY_MODULE
-//#define WEATHER_MODULE
-#define ENVIRONMENTAL_MODULE
-#define SECURITY_MODULE
-
-class Application
+/**
+ * A wiselib application that collects periodically readings
+ * from 
+ * <a href='http://www.coalesenses.com/index.php?page=hardware-docs-and-demos'>
+ * iSense : Environmental, Security, Weather sensors </a>
+ * and reports them to the 
+ * <a href='https://github.com/organizations/Uberdust'> Uberdust Backend</a>
+ * Also collects Link Readings (Neighbor Discovery and Lqis).
+ */
+class iSenseCollectorApp
 :
 public isense::SensorHandler,
 public isense::Int8DataHandler,
 public isense::Uint32DataHandler {
 public:
 
-    virtual uint16_t application_id() {
+    /**
+     * Returns a unique application id.
+     * @return the id of the current application
+     */
+    uint16_t application_id() {
         return 1;
     }
 
-    virtual uint8_t software_revision(void) {
+    /**
+     * Returns the current version of the application
+     * @return the current version
+     */
+    uint8_t software_revision(void) {
         return REVISION;
     }
 
     //--------------------------------------------------------------
 
     /**
-     * unused in this context
+     * Accelerometer sensor, unused in this app
      * @param value
      */
     void handle_uint32_data(uint32 value) {
         //nothing
     }
 
-    //--------------------------------------------------------------
-
     /**
-     * unused in this context
+     * Accelerometer sensor, unused in this app
      * @param value
      */
     void handle_int8_data(int8 value) {
         //nothing
     }
 
+    //--------------------------------------------------------------
+
     /**
-     * boot function
+     * Initializes the application and the enabled sensor modules.
      * @param value pointer to os
      */
     void init(Os::AppMainParameter& value) {
@@ -96,131 +122,59 @@ public:
 
         mygateway_ = 0xffff;
 
-#ifdef WEATHER_MODULE
+#ifdef WEATHER_COLLECTOR
         init_weather_module(value);
 #endif
-#ifdef ENVIRONMENTAL_MODULE
+#ifdef ENVIRONMENTAL_COLLECTOR
         init_environmental_module(value);
 #endif
-#ifdef SECURITY_MODULE
+#ifdef SECURITY_COLLECTOR
         init_security_module(value);
 #endif
 
-
-
-
-        radio_->reg_recv_callback<Application, &Application::receive > (this);
+        radio_->reg_recv_callback<iSenseCollectorApp, &iSenseCollectorApp::receive > (this);
         radio_->set_channel(12);
 
-        uart_->reg_read_callback<Application, &Application::handle_uart_msg > (this);
+        uart_->reg_read_callback<iSenseCollectorApp, &iSenseCollectorApp::handle_uart_msg > (this);
         uart_->enable_serial_comm();
-
-        //        debug_->debug("INIT ");
 
         nb_.init(*radio_, *clock_, *timer_, *debug_, 2000, 16000, 250, 255);
         nb_.enable();
-        nb_. reg_event_callback<Application, &Application::ND_callback > ((uint8) 2, nb_t::NEW_NB | nb_t::NEW_NB_BIDI | nb_t::LOST_NB_BIDI | nb_t::DROPPED_NB, this);
+        nb_. reg_event_callback<iSenseCollectorApp, &iSenseCollectorApp::ND_callback > ((uint8) 2, nb_t::NEW_NB | nb_t::NEW_NB_BIDI | nb_t::LOST_NB_BIDI | nb_t::DROPPED_NB, this);
 
-#ifdef WEATHER_MODULE
-        timer_->set_timer<Application, &Application::read_weather_sensors > (10000, this, (void*) 0);
+#ifdef WEATHER_COLLECTOR
+        timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_weather_sensors > (10000, this, (void*) 0);
 #endif
-#ifdef ENVIRONMENTAL_MODULE
-        timer_->set_timer<Application, &Application::read_environmental_sensors > (10000, this, (void*) 0);
+#ifdef ENVIRONMENTAL_COLLECTOR
+        timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_environmental_sensors > (10000, this, (void*) 0);
 #endif
         if (is_gateway()) {
             // register task to be called in a minute for periodic sensor readings
-            timer_->set_timer<Application, &Application::broadcast_gateway > (1000, this, (void*) 0);
+            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::broadcast_gateway > (1000, this, (void*) 0);
             //            timer_->set_timer<Application, &Application::execute > (5000, this, (void*) TASK_TEST);
         }
     }
-    // --------------------------------------------------------------------
 
+    // --------------------------------------------------------------------
+#ifdef WEATHER_COLLECTOR
+
+    /**
+     * Initializes the Weather Sensor Module
+     * @param value pointer to os
+     */
     void init_weather_module(Os::AppMainParameter& value) {
         ms_ = new isense::Ms55xx(value);
-
-
-    }
-
-    void init_environmental_module(Os::AppMainParameter& value) {
-        em_ = new isense::EnvironmentModule(value);
-        if (em_ != NULL) {
-            em_->enable(true);
-            if (em_->light_sensor()->enable()) {
-                em_->light_sensor()->set_data_handler(this);
-                //os().add_task_in(Time(10, 0), this, (void*) TASK_SET_LIGHT_THRESHOLD);
-                debug_->debug("em light");
-            }
-            if (em_->temp_sensor()->enable()) {
-                em_->temp_sensor()->set_data_handler(this);
-                debug_->debug("em temp");
-            }
-        }
-
-    }
-
-    void init_security_module(Os::AppMainParameter& value) {
-        pir_ = new isense::PirSensor(value);
-        pir_->set_sensor_handler(this);
-        pir_->set_pir_sensor_int_interval(2000);
-        if (pir_->enable()) {
-            pir_sensor_ = true;
-            debug_->debug("id::%x em pir", radio_->id());
-        }
-
-        //        accelerometer_ = new isense::LisAccelerometer(value);
-        //        if (accelerometer_ != NULL) {
-        //            accelerometer_->set_mode(MODE_THRESHOLD);
-        //            accelerometer_->set_threshold(25);
-        //            accelerometer_->set_handler(this);
-        //            accelerometer_->enable();
-        //        }
     }
 
     /**
-     * Periodically read sensor values and report them
-     * @param userdata unused
-     */
-    void read_environmental_sensors(void* userdata) {
-        // Get the Temperature and Luminance from sensors and debug them
-        if (radio_->id() != 0xddba) {
-            timer_->set_timer<Application, &Application::read_environmental_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
-        }
-
-        if (!is_gateway()) {
-
-            int16 temp = em_->temp_sensor()->temperature();
-            if (temp < 100) {
-                send_reading(0xffff, "temperature", temp);
-            }
-            uint32 lux = em_->light_sensor()->luminance();
-            if (lux < 20000) {
-                send_reading(0xffff, "light", lux);
-            }
-
-        } else {
-            int16 temp = em_->temp_sensor()->temperature();
-            if (temp < 100) {
-                debug_->debug("node::%x temperature %d ", radio_->id(), temp);
-
-            }
-            uint32 lux = em_->light_sensor()->luminance();
-            if (lux < 20000) {
-                debug_->debug("node::%x light %d ", radio_->id(), lux);
-            }
-
-
-        }
-
-    }
-
-    /**
-     * Periodically read sensor values from weather module and report them
-     * @param userdata unused
+     * Reads sensor values from the Weather Sensor Module
+     * and reports them to the Gateway node
+     * @param userdata unused, required for wiselib
      */
     void read_weather_sensors(void* userdata) {
         // Get the Temperature and Luminance from sensors and debug them
         if (radio_->id() != 0xddba) {
-            timer_->set_timer<Application, &Application::read_weather_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
+            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_weather_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
         }
 
         ms_ = new isense::Ms55xx(*ospointer);
@@ -238,22 +192,107 @@ public:
             debug_->debug("node::%x barometricpressure %d ", radio_->id(), bpressure / 10);
         }
     }
+#endif
+
+#ifdef ENVIRONMENTAL_COLLECTOR
 
     /**
-     * Periodically broadcasts the gateway node message beacon
-     * @param userdata TASK to perform
+     * Initializes the Environmental Sensor Module
+     * @param value pointer to os
      */
-    void broadcast_gateway(void* value) {
+    void init_environmental_module(Os::AppMainParameter& value) {
+        em_ = new isense::EnvironmentModule(value);
+        if (em_ != NULL) {
+            em_->enable(true);
+            if (em_->light_sensor()->enable()) {
+                em_->light_sensor()->set_data_handler(this);
+                //os().add_task_in(Time(10, 0), this, (void*) TASK_SET_LIGHT_THRESHOLD);
+                debug_->debug("em light");
+            }
+            if (em_->temp_sensor()->enable()) {
+                em_->temp_sensor()->set_data_handler(this);
+                debug_->debug("em temp");
+            }
+        }
+    }
+
+    /**
+     * Reads sensor values from the Environmental Sensor Module
+     * and reports them to the Gateway node
+     * @param userdata unused, required for wiselib
+     */
+    void read_environmental_sensors(void* userdata) {
+        // Get the Temperature and Luminance from sensors and debug them
+        if (radio_->id() != 0xddba) {
+            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_environmental_sensors > (REPORTING_INTERVAL * 1000, this, (void*) 0);
+        }
+        if (!is_gateway()) {
+            int16 temp = em_->temp_sensor()->temperature();
+            if (temp < 100) {
+                send_reading(0xffff, "temperature", temp);
+            }
+            uint32 lux = em_->light_sensor()->luminance();
+            if (lux < 20000) {
+                send_reading(0xffff, "light", lux);
+            }
+        } else {
+            int16 temp = em_->temp_sensor()->temperature();
+            if (temp < 100) {
+                debug_->debug("node::%x temperature %d ", radio_->id(), temp);
+
+            }
+            uint32 lux = em_->light_sensor()->luminance();
+            if (lux < 20000) {
+                debug_->debug("node::%x light %d ", radio_->id(), lux);
+            }
+        }
+    }
+
+#endif
+
+#ifdef SECURITY_COLLECTOR
+
+    /**
+     * Initializes the Security Sensor Module
+     * @param value pointer to os
+     */
+    void init_security_module(Os::AppMainParameter& value) {
+        pir_ = new isense::PirSensor(value);
+        pir_->set_sensor_handler(this);
+        pir_->set_pir_sensor_int_interval(2000);
+        if (pir_->enable()) {
+            pir_sensor_ = true;
+            debug_->debug("id::%x em pir", radio_->id());
+        }
+
+        //        accelerometer_ = new isense::LisAccelerometer(value);
+        //        if (accelerometer_ != NULL) {
+        //            accelerometer_->set_mode(MODE_THRESHOLD);
+        //            accelerometer_->set_threshold(25);
+        //            accelerometer_->set_handler(this);
+        //            accelerometer_->enable();
+        //        }
+    }
+#endif
+
+    /**
+     * Broadcasts the Gateway Beacon
+     * Used from Gateway nodes to let other devices know him 
+     * forward messages to the backend through him
+     * @param userdata unused, required for wiselib
+     */
+    void broadcast_gateway(void* userdata) {
         //        debug_->debug("broadcast_gateway");
         broadcastMsg_t msg;
         radio_->send(0xffff, msg.length(), (block_data_t*) & msg);
-        timer_->set_timer<Application, &Application::broadcast_gateway > (20 * 1000, this, (void*) 0);
+        timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::broadcast_gateway > (20 * 1000, this, (void*) 0);
     }
 
 protected:
 
     /**
-     * Handles a new sensor reading
+     * Handles a new Pir Event
+     * Reports the Reading to the Gateway
      */
     virtual void handle_sensor() {
         //        debug_->debug("pir event");
@@ -265,11 +304,11 @@ protected:
     }
 
     /**
-     * Handles a new neighborhood event
-     * @param event event type
-     * @param from neighbor id
-     * @param len unused
-     * @param data unused
+     * Handles a new Neighborhood Event
+     * @param event event type {NB,NBB,NBL,NBD}
+     * @param from the node_id of the other side of the link
+     * @param len unused, concerns the beacon payloads
+     * @param data unused, concerns the beacon payloads
      */
     void ND_callback(uint8 event, uint16 from, uint8 len, uint8 * data) {
         if (event == nb_t::NEW_NB_BIDI) {
@@ -291,9 +330,10 @@ protected:
     }
 
     /**
-     * Handle a new uart event
-     * @param len payload length
-     * @param mess payload buffer
+     * Handle a new Uart Event
+     * Used to forward Commands from Uberdust to the WSN
+     * @param len the length of the payload and node id to forward the command
+     * @param mess the buffer containing the payload and the node id as {Node_id,payload}
      */
     void handle_uart_msg(Os::Uart::size_t len, Os::Uart::block_data_t *mess) {
         node_id_t node;
@@ -312,33 +352,43 @@ protected:
     }
 
     /**
-     * Handle a new incoming message
-     * @param src_addr
-     * @param len
-     * @param buf
+     * Handle a new Received Message
+     * @param src_addr the source of the message
+     * @param len the length of the message
+     * @param buf the data of the message
      */
     void receive(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
         //        debug_payload((uint8_t*) buf, len, src_addr);
+
+        //check if an actuation command
         if (check_led(src_addr, len, buf)) return;
 
+
         if (!is_gateway()) {
-            //Executed by nonGateway nodes
+            //if not a gateway check only for a GatewayBeaconMsg
             if (check_gateway(src_addr, len, buf)) return;
         } else {
-            //Executed by Gateway nodes
-            if ((radio_->id() == 0x1ccd) && (src_addr == 0x42f)) {
-                debug_->debug("case1");
-                return;
-            }
+            //if a gateway check the message for readings to report
+
+            //check for the air quality sensor
             if (check_air_quality(src_addr, len, buf)) {
                 debug_->debug("check_air_quality");
                 return;
             }
 
+            //check for a CollectorMsg
             check_collector(src_addr, len, buf);
         }
     }
 
+    /**
+     * Checks the incoming payload for a Command message.
+     * If the Payload is a Command message, swithces the led according to the message
+     * @param src_addr the source of the message
+     * @param len the length of the payload
+     * @param buf the contents of the payload
+     * @return true if it was the Command message
+     */
     bool check_led(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
         if (buf[0] == 0x7f && buf[1] == 0x69 && buf[2] == 0x70 && buf[3] == 0x1) {
             if (buf[4] == 0x1) {
@@ -356,6 +406,14 @@ protected:
         return false;
     }
 
+    /**
+     * Checks the incoming payload for a GatewayBeaconMsg.
+     * If the Payload is a GatewayBeaconMsg, replaces the old gateway with the new one
+     * @param src_addr the source of the message
+     * @param len the length of the payload
+     * @param buf the contents of the payload
+     * @return true if it was the GatewayBeaconMsg
+     */
     bool check_gateway(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
         if ((len == 10) && (buf[0] == 0)) {
             bool sGmsg = true;
@@ -371,6 +429,14 @@ protected:
         return false;
     }
 
+    /**
+     * Checks the incoming payload for an AirQualityMsg.
+     * If the Payload is a AirQualityMsg, and reports it to the backend
+     * @param src_addr the source of the message
+     * @param len the length of the payload
+     * @param buf the contents of the payload
+     * @return true if it was the AirQualityMsg
+     */
     bool check_air_quality(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
         if ((src_addr == 0x2c41) && (buf[0] == 0x43) && (0x9979 == radio_->id())) {
             uint8 mess[len];
@@ -389,6 +455,14 @@ protected:
         return false;
     }
 
+    /**
+     * Checks the incoming payload for a CollectorMsg.
+     * If the Payload is a CollectorMsg, and reports it to the backend
+     * @param src_addr the source of the message
+     * @param len the length of the payload
+     * @param buf the contents of the payload
+     * @return true if it was the CollectorMsg
+     */
     void check_collector(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
 
         collectorMsg_t * mess = (collectorMsg_t *) buf;
@@ -404,7 +478,6 @@ protected:
             }
         }
     }
-
 
 private:
 
@@ -480,10 +553,16 @@ private:
     nb_t nb_;
     bool pir_sensor_;
     Os::AppMainParameter* ospointer;
+#ifdef ENVIRONMENTAL_COLLECTOR
     isense::EnvironmentModule* em_;
-    //    isense::LisAccelerometer* accelerometer_;
+#endif
+#ifdef SECURITY_COLLECTOR
     isense::PirSensor* pir_;
+    //    isense::LisAccelerometer* accelerometer_;
+#endif
+#ifdef WEATHER_COLLECTOR
     isense::Ms55xx* ms_;
+#endif
     isense::CoreModule* cm_;
 
     Os::TxRadio::self_pointer_t radio_;
@@ -494,7 +573,7 @@ private:
 
 };
 
-wiselib::WiselibApplication<Os, Application> application;
+wiselib::WiselibApplication<Os, iSenseCollectorApp> application;
 // --------------------------------------------------------------------------
 
 void application_main(Os::AppMainParameter& value) {
