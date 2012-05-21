@@ -6,10 +6,12 @@
 #undef WEATHER_COLLECTOR
 #undef ENVIRONMENTAL_COLLECTOR
 #undef SECURITY_COLLECTOR
+#undef SOLAP_COLLECTOR
 
 //Uncomment to enable the isense module
 #define ENVIRONMENTAL_COLLECTOR
-#define SECURITY_COLLECTOR
+//#define SECURITY_COLLECTOR
+//#define SOLAR_COLLECTOR
 //#define WEATHER_COLLECTOR
 
 #include <isense/modules/core_module/core_module.h>
@@ -17,6 +19,9 @@
 #include <isense/modules/environment_module/environment_module.h>
 #include <isense/modules/environment_module/temp_sensor.h>
 #include <isense/modules/environment_module/light_sensor.h>
+#endif
+#ifdef SOLAR_COLLECTOR
+#include <isense/modules/solar_module/solar_module.h>
 #endif
 #ifdef SECURITY_COLLECTOR
 #include <isense/modules/security_module/pir_sensor.h>
@@ -62,9 +67,10 @@ typedef Os::TxRadio::block_data_t block_data_t;
  * <a href='https://github.com/organizations/Uberdust'> Uberdust Backend</a>
  * Also collects Link Readings (Neighbor Discovery and Lqis).
  */
-class iSenseCollectorApp
-:
+class iSenseCollectorApp :
+#ifdef SECURITY_COLLECTOR
 public isense::SensorHandler,
+#endif
 public isense::Int8DataHandler,
 public isense::Uint32DataHandler {
 public:
@@ -110,6 +116,7 @@ public:
      * @param value pointer to os
      */
     void init(Os::AppMainParameter& value) {
+
         ospointer = &value;
         radio_ = &wiselib::FacetProvider<Os, Os::TxRadio>::get_facet(value);
         timer_ = &wiselib::FacetProvider<Os, Os::Timer>::get_facet(value);
@@ -124,6 +131,9 @@ public:
 
 #ifdef WEATHER_COLLECTOR
         init_weather_module(value);
+#endif
+#ifdef SOLAR_COLLECTOR
+        init_solar_module(value);
 #endif
 #ifdef ENVIRONMENTAL_COLLECTOR
         init_environmental_module(value);
@@ -145,12 +155,16 @@ public:
 #ifdef WEATHER_COLLECTOR
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_weather_sensors > (10000, this, (void*) 0);
 #endif
+#ifdef SOLAR_COLLECTOR
+        timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_solar_sensors > (5000, this, (void*) TASK_WAKE);
+#else        
 #ifdef ENVIRONMENTAL_COLLECTOR
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_environmental_sensors > (10000, this, (void*) 0);
 #endif
+#endif
         if (is_gateway()) {
             // register task to be called in a minute for periodic sensor readings
-            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::broadcast_gateway > (1000, this, (void*) 0);
+            //            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::broadcast_gateway > (1000, this, (void*) 0);
             //            timer_->set_timer<Application, &Application::execute > (5000, this, (void*) TASK_TEST);
         }
     }
@@ -249,6 +263,106 @@ public:
     }
 
 #endif
+#ifdef SOLAR_COLLECTOR
+
+    /**
+     * Initializes the Solar Harvesting Module
+     * @param value pointer to os
+     */
+    void init_solar_module(Os::AppMainParameter& value) {
+        // create SolarModule instance
+        sm_ = new isense::SolarModule(value);
+
+        // if allocation of SolarModule was successful
+        if (sm_ != NULL) {
+            // read out the battery state
+            isense::BatteryState bs = sm_->battery_state();
+            // estimate battery charge from the battery voltage
+            uint32 charge = sm_->estimate_charge(bs.voltage);
+            // set the estimated battery charge
+            sm_->set_battery_charge(charge);
+
+        }
+
+    }
+
+    /**
+     * Reads sensor values from the Solar Harvesting Module
+     * and reports them to the Gateway node
+     * Also sets the duty cycling of the iSense device 
+     * so that battery life is extended
+     * @param userdata Used to define a Sleep or wake up task
+     */
+    void read_solar_sensors(void* userdata) {
+        if ((uint32) userdata == TASK_WAKE) {
+            // register as a task to wake up again in one minute
+            // the below call equals calling
+            // add_task_in(Time(60,0), this, (void*)TASK_WAKE);
+            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_solar_sensors > (60000, this, (void*) TASK_WAKE);
+
+            //initiate control cycle, and read out battery state
+            isense::BatteryState bs = sm_->control();
+
+            // prevent sleeping to keep node awake
+            ((isense::Os *) ospointer)->allow_sleep(false);
+            //            ospointer->allow_sleep(false);
+
+            // adopt duty cycle to the remaining battery charge
+            if (bs.charge < 50000) {
+                // battery nearly empty -->
+                // set ultra-low duty cycle
+                // live ~20 days
+                duty_cycle_ = 1; // 0.1%
+            } else
+                if (bs.capacity < 1000000) //1 Ah or less
+            {
+                //live approx. 9 days out of 1Ah
+                // and then another 20 days at 0.1% duty cycle
+                duty_cycle_ = 100;
+            } else
+                if (bs.capacity < 3000000) //3Ah or less
+            {
+                // live approx. 6 days out of 1Ah
+                // and then another 9 days at 10% duty cycle
+                // and then another 20 days at 0.1% duty cycle
+                duty_cycle_ = 300; // 30%
+            } else
+                if (bs.capacity < 5000000/*2Ah*/) {
+                // live approx. 4 days out of 2Ah
+                // and then another 6 days at 30%
+                // and then another 9 days at 10% duty cycle
+                // and then another 20 days at 0.1% duty cycle
+                duty_cycle_ = 500; // 50%
+            } else {
+                // live approx. 1.5 days out of 1.4Ah
+                // and then another 4 days at 40%
+                // and then another 6 days at 30%
+                // and then another 9 days at 10% duty cycle
+                // and then another 20 days at 0.1% duty cycle
+                duty_cycle_ = 880; // 88%
+            }
+            // add task to allow sleeping again
+            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_solar_sensors > (duty_cycle_ * 60000, this, (void*) TASK_SLEEP);
+            send_reading(0xffff, "batterycharge", bs.capacity);
+            //            send_reading(0xffff, "batterycapacity", bs.capacity);
+            //            send_reading(0xffff, "dutycycle", duty_cycle_);
+            //            send_reading(0xffff, "batterycurrent", bs.current);
+
+            // output battery state and duty cycle
+            //            os().debug("voltage=%dmV, charge=%iuAh -> duty cycle=%d, current=%i",                    , , , );
+        } else
+            if ((uint32) userdata == TASK_SLEEP) {
+            // allow sleeping again
+            ((isense::Os *) ospointer)->allow_sleep(true);
+            //            os().allow_sleep(true);
+        }
+
+#ifdef SOLAR_COLLECTOR
+        read_environmental_sensors(0);
+#endif
+
+    }
+#endif
 
 #ifdef SECURITY_COLLECTOR
 
@@ -256,7 +370,7 @@ public:
      * Initializes the Security Sensor Module
      * @param value pointer to os
      */
-    void init_security_module(Os::AppMainParameter& value) {
+    void init_security_module(Os::AppMainParameter & value) {
         pir_ = new isense::PirSensor(value);
         pir_->set_sensor_handler(this);
         pir_->set_pir_sensor_int_interval(2000);
@@ -335,7 +449,7 @@ protected:
      * @param len the length of the payload and node id to forward the command
      * @param mess the buffer containing the payload and the node id as {Node_id,payload}
      */
-    void handle_uart_msg(Os::Uart::size_t len, Os::Uart::block_data_t *mess) {
+    void handle_uart_msg(Os::Uart::size_t len, Os::Uart::block_data_t * mess) {
         node_id_t node;
         memcpy(&node, mess, sizeof (node_id_t));
         radio_->send(node, len - 2, (uint8*) mess + 2);
@@ -516,6 +630,7 @@ private:
             case 0xc7a: //0.2
             case 0x99ad: //3,1
             case 0x8978: //1.1
+            case 0x978:
                 //            case 0x181: //1.1
                 return true;
             default:
@@ -563,6 +678,10 @@ private:
 #ifdef WEATHER_COLLECTOR
     isense::Ms55xx* ms_;
 #endif
+#ifdef SOLAR_COLLECTOR
+    isense::SolarModule* sm_;
+    uint16_t duty_cycle_;
+#endif 
     isense::CoreModule* cm_;
 
     Os::TxRadio::self_pointer_t radio_;
