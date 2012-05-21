@@ -9,9 +9,9 @@
 #undef SOLAP_COLLECTOR
 
 //Uncomment to enable the isense module
-#define ENVIRONMENTAL_COLLECTOR
+//#define ENVIRONMENTAL_COLLECTOR
 //#define SECURITY_COLLECTOR
-//#define SOLAR_COLLECTOR
+#define SOLAR_COLLECTOR
 //#define WEATHER_COLLECTOR
 
 #include <isense/modules/core_module/core_module.h>
@@ -156,6 +156,7 @@ public:
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_weather_sensors > (10000, this, (void*) 0);
 #endif
 #ifdef SOLAR_COLLECTOR
+        debug_->debug("set timer");
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_solar_sensors > (5000, this, (void*) TASK_WAKE);
 #else        
 #ifdef ENVIRONMENTAL_COLLECTOR
@@ -270,17 +271,20 @@ public:
      * @param value pointer to os
      */
     void init_solar_module(Os::AppMainParameter& value) {
+        debug_->debug("init_solar_module");
         // create SolarModule instance
         sm_ = new isense::SolarModule(value);
 
         // if allocation of SolarModule was successful
         if (sm_ != NULL) {
+            debug_->debug("not null");
             // read out the battery state
             isense::BatteryState bs = sm_->battery_state();
             // estimate battery charge from the battery voltage
             uint32 charge = sm_->estimate_charge(bs.voltage);
             // set the estimated battery charge
             sm_->set_battery_charge(charge);
+            debug_->debug("initialized");
 
         }
 
@@ -294,6 +298,7 @@ public:
      * @param userdata Used to define a Sleep or wake up task
      */
     void read_solar_sensors(void* userdata) {
+        debug_->debug("read_solar_sensors");
         if ((uint32) userdata == TASK_WAKE) {
             // register as a task to wake up again in one minute
             // the below call equals calling
@@ -357,7 +362,7 @@ public:
             //            os().allow_sleep(true);
         }
 
-#ifdef SOLAR_COLLECTOR
+#ifdef ENVIRONMENTAL_COLLECTOR
         read_environmental_sensors(0);
 #endif
 
@@ -480,7 +485,7 @@ protected:
 
         if (!is_gateway()) {
             //if not a gateway check only for a GatewayBeaconMsg
-            if (check_gateway(src_addr, len, buf)) return;
+//            if (check_gateway(src_addr, len, buf)) return;
         } else {
             //if a gateway check the message for readings to report
 
