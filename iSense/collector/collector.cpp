@@ -3,18 +3,22 @@
 #include "util/pstl/map_static_vector.h"
 #include "util/pstl/static_string.h"
 
+#undef CORE_COLLECTOR
 #undef WEATHER_COLLECTOR
 #undef ENVIRONMENTAL_COLLECTOR
 #undef SECURITY_COLLECTOR
 #undef SOLAP_COLLECTOR
 
 //Uncomment to enable the isense module
-//#define ENVIRONMENTAL_COLLECTOR
-//#define SECURITY_COLLECTOR
-#define SOLAR_COLLECTOR
+#define CORE_COLLECTOR
+#define ENVIRONMENTAL_COLLECTOR
+#define SECURITY_COLLECTOR
+//#define SOLAR_COLLECTOR
 //#define WEATHER_COLLECTOR
 
+#ifdef CORE_COLLECTOR
 #include <isense/modules/core_module/core_module.h>
+#endif
 #ifdef ENVIRONMENTAL_COLLECTOR
 #include <isense/modules/environment_module/environment_module.h>
 #include <isense/modules/environment_module/temp_sensor.h>
@@ -124,9 +128,9 @@ public:
         debug_->debug("*Boot*");
         uart_ = &wiselib::FacetProvider<Os, Os::Uart>::get_facet(value);
         clock_ = &wiselib::FacetProvider<Os, Os::Clock>::get_facet(value);
-
+#ifdef CORE_COLLECTOR
         cm_ = new isense::CoreModule(value);
-
+#endif
         mygateway_ = 0xffff;
 
 #ifdef WEATHER_COLLECTOR
@@ -165,7 +169,7 @@ public:
 #endif
         if (is_gateway()) {
             // register task to be called in a minute for periodic sensor readings
-            //            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::broadcast_gateway > (1000, this, (void*) 0);
+            timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::broadcast_gateway > (1000, this, (void*) 0);
             //            timer_->set_timer<Application, &Application::execute > (5000, this, (void*) TASK_TEST);
         }
     }
@@ -349,9 +353,9 @@ public:
             // add task to allow sleeping again
             timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_solar_sensors > (duty_cycle_ * 60000, this, (void*) TASK_SLEEP);
             send_reading(0xffff, "batterycharge", bs.capacity);
-            //            send_reading(0xffff, "batterycapacity", bs.capacity);
-            //            send_reading(0xffff, "dutycycle", duty_cycle_);
-            //            send_reading(0xffff, "batterycurrent", bs.current);
+            send_reading(0xffff, "batteryvoltage", bs.voltage);
+            send_reading(0xffff, "dutycycle", duty_cycle_);
+            send_reading(0xffff, "batterycurrent", bs.current);
 
             // output battery state and duty cycle
             //            os().debug("voltage=%dmV, charge=%iuAh -> duty cycle=%d, current=%i",                    , , , );
@@ -479,13 +483,15 @@ protected:
     void receive(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
         //        debug_payload((uint8_t*) buf, len, src_addr);
 
+#ifdef CORE_COLLECTOR
         //check if an actuation command
         if (check_led(src_addr, len, buf)) return;
+#endif
 
 
         if (!is_gateway()) {
             //if not a gateway check only for a GatewayBeaconMsg
-//            if (check_gateway(src_addr, len, buf)) return;
+            if (check_gateway(src_addr, len, buf)) return;
         } else {
             //if a gateway check the message for readings to report
 
@@ -499,6 +505,7 @@ protected:
             check_collector(src_addr, len, buf);
         }
     }
+#ifdef CORE_COLLECTOR
 
     /**
      * Checks the incoming payload for a Command message.
@@ -524,6 +531,7 @@ protected:
         }
         return false;
     }
+#endif
 
     /**
      * Checks the incoming payload for a GatewayBeaconMsg.
@@ -634,8 +642,7 @@ private:
             case 0x1ccd: //0.1
             case 0xc7a: //0.2
             case 0x99ad: //3,1
-            case 0x8978: //1.1
-            case 0x978:
+            case 0x8978: //1.1            
                 //            case 0x181: //1.1
                 return true;
             default:
@@ -687,8 +694,9 @@ private:
     isense::SolarModule* sm_;
     uint16_t duty_cycle_;
 #endif 
+#ifdef CORE_COLLECTOR
     isense::CoreModule* cm_;
-
+#endif
     Os::TxRadio::self_pointer_t radio_;
     Os::Timer::self_pointer_t timer_;
     Os::Debug::self_pointer_t debug_;
