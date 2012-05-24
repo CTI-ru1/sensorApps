@@ -75,6 +75,9 @@ class iSenseCollectorApp :
 #ifdef SECURITY_COLLECTOR
 public isense::SensorHandler,
 #endif
+#ifdef SOLAR_COLLECTOR
+public isense::SleepHandler,
+#endif
 public isense::Int8DataHandler,
 public isense::Uint32DataHandler {
 public:
@@ -161,11 +164,20 @@ public:
 #endif
 #ifdef SOLAR_COLLECTOR
         debug_->debug("set timer");
+        ((isense::Os *) ospointer)->allow_sleep(false);
+
+        ((isense::Os *) ospointer)->allow_doze(false);
+
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_solar_sensors > (5000, this, (void*) TASK_WAKE);
 #else        
 #ifdef ENVIRONMENTAL_COLLECTOR
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_environmental_sensors > (10000, this, (void*) 0);
 #endif
+#endif
+
+#ifdef CORE_COLLECTOR
+        send_reading(0xffff, "led", 0);
+        cm_->led_off();
 #endif
         if (is_gateway()) {
             // register task to be called in a minute for periodic sensor readings
@@ -371,6 +383,21 @@ public:
 #endif
 
     }
+
+    bool stand_by(void) {
+        return true;
+    }
+
+    //----------------------------------------------------------------------------
+
+    bool hibernate(void) {
+        return false;
+    }
+
+    //----------------------------------------------------------------------------
+
+    void wake_up(bool memory_held) {
+    }
 #endif
 
 #ifdef SECURITY_COLLECTOR
@@ -519,11 +546,11 @@ protected:
         if (buf[0] == 0x7f && buf[1] == 0x69 && buf[2] == 0x70 && buf[3] == 0x1) {
             if (buf[4] == 0x1) {
                 if (buf[5] == 1) {
-                    send_reading(0xffff, "led", 1);
+                    send_reading(mygateway_, "led", 1);
                     cm_->led_on();
                     return true;
                 } else if (buf[5] == 0) {
-                    send_reading(0xffff, "led", 0);
+                    send_reading(mygateway_, "led", 0);
                     cm_->led_off();
                     return true;
                 }
@@ -638,8 +665,7 @@ private:
         switch (radio_->id()) {
             case 0x6699: //2.3
             case 0x0498: //2.1
-            case 0x1b7f: //3.3
-            case 0x1ccd: //0.1
+            case 0x1b7f: //3.3            
             case 0xc7a: //0.2
             case 0x99ad: //3,1
             case 0x8978: //1.1            
