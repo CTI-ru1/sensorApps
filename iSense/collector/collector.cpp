@@ -15,6 +15,7 @@
 #define SECURITY_COLLECTOR
 //#define SOLAR_COLLECTOR
 //#define WEATHER_COLLECTOR
+#define ND_COLLECTOR
 
 #ifdef CORE_COLLECTOR
 #include <isense/modules/core_module/core_module.h>
@@ -36,9 +37,11 @@
 
 typedef wiselib::OSMODEL Os;
 
+#ifdef ND_COLLECTOR
 //neighbor discovery algorithm
 #include "algorithms/neighbor_discovery/echo.h"
 typedef wiselib::Echo<Os, Os::TxRadio, Os::Timer, Os::Debug> nb_t;
+#endif
 
 //reporting message
 #include "../../messages/collector_message_new.h"
@@ -60,7 +63,7 @@ typedef Os::TxRadio::block_data_t block_data_t;
 #define REVISION 4
 
 //defines every how many seconds new readings will be reported to the gateway
-#define REPORTING_INTERVAL 180
+#define REPORTING_INTERVAL 60
 
 /**
  * A wiselib application that collects periodically readings
@@ -155,9 +158,11 @@ public:
         uart_->reg_read_callback<iSenseCollectorApp, &iSenseCollectorApp::handle_uart_msg > (this);
         uart_->enable_serial_comm();
 
+#ifdef ND_COLLECTOR
         nb_.init(*radio_, *clock_, *timer_, *debug_, 2000, 16000, 250, 255);
         nb_.enable();
         nb_. reg_event_callback<iSenseCollectorApp, &iSenseCollectorApp::ND_callback > ((uint8) 2, nb_t::NEW_NB | nb_t::NEW_NB_BIDI | nb_t::LOST_NB_BIDI | nb_t::DROPPED_NB, this);
+#endif 
 
 #ifdef WEATHER_COLLECTOR
         timer_->set_timer<iSenseCollectorApp, &iSenseCollectorApp::read_weather_sensors > (10000, this, (void*) 0);
@@ -452,7 +457,8 @@ protected:
             debug_->debug("node::%x pir 1 ", radio_->id());
         }
     }
-
+    
+#ifdef ND_COLLECTOR
     /**
      * Handles a new Neighborhood Event
      * @param event event type {NB,NBB,NBL,NBD}
@@ -478,6 +484,7 @@ protected:
             }
         }
     }
+#endif
 
     /**
      * Handle a new Uart Event
@@ -489,7 +496,9 @@ protected:
         node_id_t node;
         memcpy(&node, mess, sizeof (node_id_t));
         radio_->send(node, len - 2, (uint8*) mess + 2);
-        debug_command(mess + 2, 13, node);
+        debug_->debug("FORWARDING to %x ", node);
+
+/*        debug_command(mess + 2, 13, node);
         if (len > 8) {
             char buffer[100];
             int bytes_written = 0;
@@ -497,8 +506,8 @@ protected:
                 bytes_written += sprintf(buffer + bytes_written, "%d", mess[i]);
             }
             buffer[bytes_written] = '\0';
-            debug_->debug("FORWARDING to %x %s", node, buffer);
         }
+*/
     }
 
     /**
@@ -508,7 +517,15 @@ protected:
      * @param buf the data of the message
      */
     void receive(node_id_t src_addr, Os::TxRadio::size_t len, block_data_t * buf) {
-        //        debug_payload((uint8_t*) buf, len, src_addr);
+                debug_payload((uint8_t*) buf, len, src_addr);
+
+    //check for the air quality sensor
+    if (check_air_quality(src_addr, len, buf)) {
+	debug_->debug("check_air_quality");
+        return;
+    }
+
+
 
 #ifdef CORE_COLLECTOR
         //check if an actuation command
@@ -521,13 +538,6 @@ protected:
             if (check_gateway(src_addr, len, buf)) return;
         } else {
             //if a gateway check the message for readings to report
-
-            //check for the air quality sensor
-            if (check_air_quality(src_addr, len, buf)) {
-                debug_->debug("check_air_quality");
-                return;
-            }
-
             //check for a CollectorMsg
             check_collector(src_addr, len, buf);
         }
@@ -597,13 +607,30 @@ protected:
             memcpy(mess, buf, len);
             mess[len - 1] = '\0';
 
+	collectorMsg_t cmess;
+	cmess.set_source(src_addr);
+        cmess.set_target(0xffff);
+        char temp_string[30];
             if ((buf[1] == 0x4f) && (buf[2] == 0x32)) {
+        sprintf(temp_string, "co");
+        cmess.set_capability(temp_string);
+        cmess.set_value((const char*)(mess+5));
                 debug_->debug("node::%x co %s ", src_addr, mess + 5);
             } else if (buf[1] == 0x4f) {
+        sprintf(temp_string, "co2");
+        cmess.set_capability(temp_string);
+        cmess.set_value((const char*)(mess+4));
                 debug_->debug("node::%x co2 %s ", src_addr, mess + 4);
             } else if (buf[1] == 0x48) {
+        sprintf(temp_string, "ch4");
+        cmess.set_capability(temp_string);
+        cmess.set_value((const char*)(mess+5));
                 debug_->debug("node::%x ch4 %s ", src_addr, mess + 5);
             }
+        debug_->debug("Contains bidi %s -> %s ", cmess.capability(), cmess.value());
+        radio_->send(mygateway_, cmess.length(), (uint8*) & cmess);
+
+
             return true;
         }
         return false;
@@ -703,7 +730,11 @@ private:
     }
 
     node_id_t mygateway_;
+
+#ifdef ND_COLLECTOR
     nb_t nb_;
+#endif
+    
     bool pir_sensor_;
     Os::AppMainParameter* ospointer;
 #ifdef ENVIRONMENTAL_COLLECTOR
