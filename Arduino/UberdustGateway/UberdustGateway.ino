@@ -31,22 +31,38 @@ byte uberdustServer[] = {
 
 
 
+void callback(char* topic, byte* payload, unsigned int length) {
+  //TODO: forward topic commands to the routing protocol.
+  Tx16Request tx = Tx16Request(0xffff, payload, length);
+  blink(8);
+  xbee.send(tx, 112);
+}
+
 
 void setup()
 {
+  pinMode(9,OUTPUT);
+  pinMode(8,OUTPUT);
   //start our XbeeRadio object and set our baudrate to 38400.
   xbee.begin(38400);
   //Initialize our XBee module with the correct values using channel 13
   xbee.init(12);
   Ethernet.begin(mac);
 
-
+  gateway.setXbeeRadio(&xbee);
   gateway.setUberdustServer(uberdustServer);
   gateway.setGatewayID(xbee.getMyAddress());
   gateway.setTestbedID(1);
 
-  gateway.connect();
+  gateway.connect(callback);
 
+}
+
+void blink(int pin){
+  digitalWrite(pin,HIGH);
+  delay(100);
+  digitalWrite(pin,LOW);
+  delay(100);
 }
 
 void loop()
@@ -57,7 +73,6 @@ void loop()
   //returns true if there is a packet for us on port 112
   if(xbee.checkForData(112))
   {
-
     //get the response
     Rx16Response rx;
     xbee.getResponse().getRx16Response(rx);
@@ -66,9 +81,15 @@ void loop()
     sprintf(address,"%x",rx.getRemoteAddress16());
 
     gateway.publish(rx.getRemoteAddress16(),xbee.getResponse().getData(),xbee.getResponse().getDataLength()); 
+    blink(9);
   } 
 
 }
+
+
+
+
+
 
 
 
