@@ -12,9 +12,11 @@
 #include <XBee.h>
 #include <XbeeRadio.h>
 #include <PubSubClient.h>
+#include "TreeRouting.h"
 
 #include "UberdustGateway.h"
 UberdustGateway gateway;
+TreeRouting * routing;
 
 //Create the XbeeRadio object we'll be using
 XBeeRadio xbee = XBeeRadio();
@@ -47,6 +49,8 @@ void setup()
   xbee.begin(38400);
   //Initialize our XBee module with the correct values using channel 13
   xbee.init(12);
+  
+  routing = new TreeRouting(&xbee,true);
   Ethernet.begin(mac);
 
   gateway.setXbeeRadio(&xbee);
@@ -70,6 +74,8 @@ void loop()
   //checks for incoming packets
   gateway.loop();
 
+  routing->loop();
+
   //returns true if there is a packet for us on port 112
   if(xbee.checkForData(112))
   {
@@ -81,7 +87,7 @@ void loop()
     sprintf(address,"%x",rx.getRemoteAddress16());
 
     gateway.publish(rx.getRemoteAddress16(),xbee.getResponse().getData(),xbee.getResponse().getDataLength()); 
-    blink(9);
+      digitalWrite(9,HIGH);
   } 
 
 }
