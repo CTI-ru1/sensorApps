@@ -12,7 +12,8 @@
 class UberdustGateway {
 
 public:
-  UberdustGateway(){
+  UberdustGateway(EthernetClient *ethernetClient){
+    this->ethernetClient =ethernetClient ; 
   };
 
   void setTestbedID(int testbedID);

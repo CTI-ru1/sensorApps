@@ -12,15 +12,17 @@ void UberdustGateway::setGatewayID(uint16_t gatewayID){
 }
 
 void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
-  ethernetClient = new EthernetClient();
+
   mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
-  sprintf(uid,"arduinoGateway",gatewayID);
+  sprintf(uid,"arduinoGateway%d",gatewayID);
   if (mqttClient->connect(uid)) {
     //TODO: send a message to declare my existence - if needed
     //client.publish(uid,"hereiam");
-    mqttClient->subscribe(uid);
+    mqttClient->subscribe("arduinoGateway");
+    mqttClient->subscribe("heartbeat");
   }
 }
+
 
 
 
