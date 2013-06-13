@@ -108,7 +108,7 @@ void add_sensors() {
     if (true) {
 	//switchSensor* swSensor = new switchSensor("security", SECURITY_PIN, HIGH);
 	//coap.add_resource(swSensor);
-	temperatureSensor* tempSensor = new temperatureSensor("temperature", TEMP_PIN);
+	temperatureSensor* tempSensor = new temperatureSensor("temp", TEMP_PIN);
 	coap.add_resource(tempSensor);
 	lightSensor* liSensor = new lightSensor("light", LIGHT_PIN);
 	coap.add_resource(liSensor);
