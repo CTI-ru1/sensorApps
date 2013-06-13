@@ -12,59 +12,42 @@
 class UberdustGateway {
 
 public:
-  UberdustGateway(EthernetClient *ethernetClient){
+  UberdustGateway(EthernetClient *ethernetClient):  
+  gatewayID(0){
     this->ethernetClient =ethernetClient ; 
   };
 
   void setTestbedID(int testbedID);
   void setUberdustServer(byte * uberdustServer);
   void setGatewayID(uint16_t gatewayID);
-  void setXbeeRadio(XBeeRadio * xbee){
-    this->xbee = xbee;
-  }
-
   void connect( void callback(char*, uint8_t*, unsigned int));
-  void loop(){
-    mqttClient->loop();
-  }
-  void publish(char * message){
-    mqttClient->publish(outTopic,message);
-  } 
-  void publish(uint16_t address, uint8_t * message,uint8_t length){
-    byte data [length+2];
-    memcpy(data,&address,2);
-    memcpy(data+2,message,length);
-    mqttClient->publish(outTopic,data,length+2);
-    //mqttClient->publish(outTopic,message,length);
-  } 
+  void loop();
 
+  void publish(char * message);
+  void publish(uint16_t address, uint8_t * message,uint8_t length);
+
+  void pongServer();
 
 protected:
-  //  void callback(char* topic, byte* payload, unsigned int length) {
-  //    //TODO: forward topic commands to the routing protocol.
-  //    Tx16Request tx = Tx16Request(0xffff, payload, length);
-  //    mqttClient->publish(outTopic,payload,length);
-  //    blink();
-  //    xbee->send(tx, 112);
-  //
-  //  }
-
-
-
-
-
 
 private:
   int testbedID;
   int gatewayID;
+  long lastPong;
   byte * uberdustServer;
   char outTopic[20] ;
   char uid[20];
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
-  XBeeRadio * xbee;
+  //XBeeRadio * xbee;
 
 };
+
+
+
+
+
+
 
 
 
