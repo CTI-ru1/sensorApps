@@ -1,0 +1,298 @@
+#include <XBee.h>
+#include <XbeeRadio.h>
+#include "tree_routing_message.h"
+#include "tree_broadcast_message.h"
+
+class TreeRouting
+{
+
+
+public:
+  TreeRouting(XBeeRadio * xbee)
+: 
+    state_         ( TrUnconnected ),
+    lastBeacon  ( 0 ),
+    parent_       ( 0 ),
+    hops_         ( 0xff )
+    {
+      this->xbee = xbee;
+      for (int i=0;i<20;i++){
+	children[i]=0xffff;
+      }
+    }
+
+  void loop(){
+
+    
+    //Check XBee messages
+    if(xbee->checkForData(112))
+    {
+      xbee->getResponse().getRx16Response(rx);
+      uint16_t from =  rx.getRemoteAddress16();
+      if (from == 0x80c) return;
+      uint8_t len = xbee->getResponse().getDataLength();
+      byte payload[len];
+      memcpy(payload , xbee->getResponse().getData() , len);
+      uint8_t msg_id = payload[0];
+      if ( msg_id == TrMsgIdBroadcast )
+      {
+	TreeBroadcastMessage *message =  reinterpret_cast<TreeBroadcastMessage*>(payload);
+	if (state_ !=TrGateway){
+	  
+	  
+	  if ((hops_==0xff)||( message->hops() + 1 < hops_ ))
+	  {
+	    digitalWrite(8,HIGH);
+	      hops_ = message->hops() + 1;
+	      parent_ = from;
+	      state_ = TrConnected;
+	      lastBeacon=millis();
+	      delay(100);
+	      message->set_hops(hops_);
+	      Tx16Request tx = Tx16Request(0xffff, (byte* )(message), message->buffer_size());
+	      xbee->send(tx, 112);
+	  digitalWrite(8,LOW);
+	  }
+	  if ((state_ == TrConnected) && (parent_==from))
+	  {
+	    digitalWrite(8,HIGH);
+	    lastBeacon=millis();
+	    delay(10);
+	    message->set_hops(hops_);
+	      Tx16Request tx = Tx16Request(0xffff, (byte* )(message), message->buffer_size());
+	      xbee->send(tx, 112);
+	  digitalWrite(8,LOW);
+	  }
+	}
+      }
+      else  if ( msg_id == TrMsgIdRouting )
+      {
+        if ( state_ == TrGateway )
+        {
+	  digitalWrite(12,HIGH);
+          delay(10);
+	  digitalWrite(12,LOW);	  
+        }
+        else if ( parent_ != 0 )
+        {
+	  bool found = false;
+	  for (int i=0; i < 20 ;i++){
+	    if (children[i]==from) {
+	      found =true;
+	      break;
+	    }
+	  }
+	  for (int i=0; i < 20 ;i++){
+	    if (children[i]==0xffff) {
+	      children[i]=from;
+	    }
+	  }
+	  
+          Tx16Request tx = Tx16Request(parent_, payload, len);
+          xbee->send(tx, 112);
+        }
+      }else if (msg_id ==Tr2MsgIdRouting   ){
+	TreeRoutingMessage *message =  reinterpret_cast<TreeRoutingMessage*>(payload);
+	digitalWrite(7,HIGH);	;
+	if (message->source()==this->myAddress){
+	  received_callback_(from,message->payload() , message->payload_size());
+          
+	}
+	else if ( state_ != TrGateway )
+        {
+	  bool found = false;
+	  for (int i=0; i < 20 ;i++){
+	    if (children[i]==message->source()) {
+	      found =true;
+	      break;
+	    }
+	  }
+	  if (found){
+	    Tx16Request tx = Tx16Request(0xffff, payload, len);
+	    xbee->send(tx, 112);
+	  }
+        }
+        delay(10);
+	  digitalWrite(7,LOW);	
+      }
+    }
+
+    
+    
+        if ( state_ == TrGateway ){
+
+      if (millis()-lastBeacon>3000){
+	digitalWrite(13,HIGH);
+	delay(10);
+        timer_elapsed();
+        lastBeacon=millis();
+	digitalWrite(13,LOW);
+    
+      }
+    }else{
+      if (millis()-lastBeacon>10000){
+      state_ = TrUnconnected;
+      parent_ = 0;
+      hops_ = 0xff;    
+      for (int i=0 ;i <20 ;i++){
+	children[i]=0xffff;
+      }
+      }
+      }
+
+    
+  }
+
+  enum StateValues
+  {
+    READY,
+    NO_VALUE,
+    INACTIVE
+  };
+  // --------------------------------------------------------------------
+#define NULL_NODE_ID      0      ///< Unknown/No node id
+
+  // --------------------------------------------------------------------
+  enum Restrictions
+  {
+    MAX_MESSAGE_LENGTH = 100  ///< Maximal number of bytes in payload
+  };
+
+
+  void receive( uint16_t from, uint8_t len, byte *data );
+  uint8_t hops()
+  {
+    return hops_;
+  };
+
+  uint16_t parent()
+  {
+    return parent_;
+  };
+  /** \brief Message IDs
+   	*/
+  enum TreeRoutingMsgIds
+  {
+    TrMsgIdBroadcast = 100, ///< Msg type for broadcasting tree state
+    TrMsgIdRouting   = 101,  ///< Msg type for routing messages
+    Tr2MsgIdRouting   = 102  ///< Msg type for routing messages
+  };
+
+  enum TreeRoutingState
+  {
+    TrGateway,
+    TrConnected,
+    TrUnconnected
+  };
+
+  int init()
+  {
+    if ( state_ == TrConnected )
+    {
+      state_ = TrUnconnected;
+      parent_ = 0;
+      hops_ = 0xff;
+    }
+
+    if ( state_ == TrGateway )
+    {
+      parent_ = xbee->getMyAddress();
+      hops_ = 0;
+    }
+    else
+    {
+      parent_ = 0;
+      hops_   = 0xff;
+    }
+
+
+    return SUCCESS;
+  }
+
+  void set_sink(bool sink)
+  {
+    if ( sink ){
+      state_ = TrGateway;
+    }
+    else{
+      state_ = TrUnconnected;
+    }
+  }
+
+  int send( uint16_t receiver,  byte *data ,uint8_t len)
+  {
+    if ( state_ == TrGateway )
+    {
+      TreeRoutingMessage message( Tr2MsgIdRouting   , xbee->getMyAddress() );
+      message.set_payload( len, data );
+      message.set_source( receiver);
+      Tx16Request tx = Tx16Request(0xffff, (byte* )(&message), message.buffer_size());
+      xbee->send(tx, 112);
+      return SUCCESS;
+    }
+  }
+  void    timer_elapsed( )
+  {
+    switch ( state_ )
+    {
+    case TrGateway:
+    case TrConnected:
+      {
+        TreeBroadcastMessage message( TrMsgIdBroadcast, hops_, parent_ );
+        Tx16Request tx = Tx16Request(0xffff, (byte* )(&message), message.buffer_size());
+        xbee->send(tx, 112);
+        break;
+      }
+    case TrUnconnected:
+      break;
+    default:
+      break;
+    }
+  }
+  void sendGateway(byte* data, uint8_t len){
+     if ( parent_ != NULL_NODE_ID ){
+      TreeRoutingMessage message( TrMsgIdRouting, xbee->getMyAddress() );
+      message.set_payload( len, data );
+      Tx16Request tx = Tx16Request(parent_, (byte* )(&message), message.buffer_size());
+      xbee->send(tx, 112);
+    }
+    else{
+      return ;
+    }
+  }
+  
+  uint8_t state(){
+    return state_;
+  }
+  void set_my_address(uint16_t me){
+    this->myAddress = me;
+  }
+  void set_message_received_callback(void (*received_callback)(uint16_t* , byte* , unsigned int ) ){
+    this->received_callback_ = received_callback;
+  }
+private :
+  void (*received_callback_)(uint16_t , byte* , unsigned int ) ;
+
+  uint16_t myAddress;
+  XBeeRadio *xbee;
+  TreeRoutingState state_;
+  uint16_t parent_;
+  uint8_t hops_;
+  //Reusable response
+  Rx16Response rx;
+  long lastBeacon;
+  uint16_t children[20];
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
