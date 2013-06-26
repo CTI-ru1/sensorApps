@@ -1,4 +1,3 @@
-#include <String.h>
 
 //mqtt
 #include <PubSubClient.h>
