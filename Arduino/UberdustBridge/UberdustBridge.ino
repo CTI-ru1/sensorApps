@@ -7,7 +7,8 @@
 #define USE_TREE_ROUTING
 
 //The TestbedID to use for the connection
-#define TESTBED_ID 1
+#define TESTBED_ID 6
+#define CHANNEL 13
 
 //Software Reset
 #include <avr/wdt.h>
@@ -144,7 +145,7 @@ void setup()
   xbee.initialize_xbee_module();
   xbee.begin(38400);
   //Initialize our XBee module with the correct values using channel 12
-  xbee.init(12);
+  xbee.init(CHANNEL);
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
   routing = new TreeRouting(&xbee);
