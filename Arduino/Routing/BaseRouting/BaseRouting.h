@@ -42,6 +42,7 @@ public:
     virtual int send(uint16_t receiver, byte *data, uint8_t len);
     virtual void loop();
     virtual uint8_t state();
+    virtual uint16_t parent();
 };
 
 #endif	/* BASEROUTING_H */

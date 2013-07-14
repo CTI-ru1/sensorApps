@@ -56,25 +56,29 @@ bool TreeRouting::is_known(uint16_t from) {
 }
 
 void TreeRouting::receive(uint16_t from, byte * payload, unsigned int len, uint8_t metric) {
+    //if (from == 0x58e)return;
     uint8_t msg_id = payload[0];
     if (msg_id == TrMsgIdBroadcast) {
         TreeBroadcastMessage *message = reinterpret_cast<TreeBroadcastMessage*> (payload);
-        if (state_ != TrGateway) {
-            //set new or better gateway
-            if ((hops_ == 0xff) || ((message->hops() + 1 < hops_)&& (parent_lqi_ > metric))) {
-                hops_ = message->hops() + 1;
-                parent_ = from;
-                state_ = TrConnected;
-                lastBeacon = millis();
-                parent_lqi_ = metric;
-                message->set_hops(hops_);
-                radio_send(0xffff, (byte*) message, message->buffer_size());
-            }
-            //update the gateway's life indicator
-            if ((state_ == TrConnected) && (parent_ == from)) {
-                lastBeacon = millis();
-                message->set_hops(hops_);
-                radio_send(0xffff, (byte*) (message), message->buffer_size());
+        if (!is_known(from)) {
+
+            if (state_ != TrGateway) {
+                //set new or better gateway
+                if ((hops_ == 0xff) || (parent_lqi_ > metric)) {
+                    hops_ = message->hops() + 1;
+                    parent_ = from;
+                    state_ = TrConnected;
+                    lastBeacon = millis();
+                    parent_lqi_ = metric;
+                    message->set_hops(hops_);
+                    radio_send(0xffff, (byte*) message, message->buffer_size());
+                }
+                //update the gateway's life indicator
+                if ((state_ == TrConnected) && (parent_ == from)) {
+                    lastBeacon = millis();
+                    message->set_hops(hops_);
+                    radio_send(0xffff, (byte*) (message), message->buffer_size());
+                }
             }
         }
     } else if (msg_id == TrMsgIdRouting) {
@@ -107,7 +111,7 @@ void TreeRouting::set_sink(bool isSink) {
         hops_ = 0;
         state_ = TrGateway;
     } else {
-
+        hops_ = 0xff;
         state_ = TrUnconnected;
     }
 }
@@ -118,7 +122,6 @@ int TreeRouting::send(uint16_t receiver, byte *data, uint8_t len) {
         message.set_payload(len, data);
         message.set_source(receiver);
         radio_send(0xffff, (byte*) (&message), message.buffer_size());
-
         return SUCCESS;
     } else {
         TreeRoutingMessage message(TrMsgIdRouting, this->myAddress);
