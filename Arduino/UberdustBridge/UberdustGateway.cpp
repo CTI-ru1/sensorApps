@@ -21,6 +21,9 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
     //client.publish(uid,"hereiam");
     mqttClient->subscribe("arduinoGateway");
     mqttClient->subscribe("heartbeat");
+    char reconnectmsg [30] ;
+    sprintf(reconnectmsg,"reconnect%s:%d",uid,testbedID);
+    mqttClient->publish("heartbeat",reconnectmsg);
   }
 }
 

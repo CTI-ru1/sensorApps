@@ -8,7 +8,7 @@
 
 //The TestbedID to use for the connection
 #define TESTBED_ID 6
-#define CHANNEL 13
+#define CHANNEL 12
 
 //Software Reset
 #include <avr/wdt.h>
@@ -48,18 +48,7 @@ byte mac[]    =
 {
   0xAE, 0xED, 0xBA, 0xFE, 0xaa, 0xaa
 };
-byte ip[]    =
-{
-  150,140,5,54
-};
-byte gatewayip[]    =
-{
-  150,140,5,1
-};
-byte subnet[]    =
-{
-  255,255,225,128
-};
+
 byte uberdustServer[] =
 {
   150, 140, 5, 20
@@ -70,7 +59,7 @@ char address[20];
 bool receivedAny;
 int lastReceivedStatus;
 long lastReceived;
-long lastCheck;
+//long lastCheck;
 
 /**
  * Callaback to the MQTT connection.
@@ -79,11 +68,12 @@ long lastCheck;
  */
 void callback(char* topic, byte* payload, unsigned int length)
 {
-  lastCheck = millis();
+//  lastCheck = millis();
   if (strcmp(topic, "heartbeat") == 0)
   {
     if (strncmp((char *)payload, "reset",5)==0){
-      lastCheck = millis();
+      //lastCheck = millis();
+      wdt_reset();
     }
   }
   else
@@ -140,6 +130,9 @@ void setup()
   pinMode(7, OUTPUT);
   bootblink();
   ledState(2);
+  Serial.begin(38400);
+  Serial.flush();
+  Serial.end();
 
   //Connect to XBee
   xbee.initialize_xbee_module();
@@ -190,11 +183,11 @@ void setup()
 
   }
   //Initialize variables
-  lastCheck = millis();
+//  lastCheck = millis();
   lastReceivedStatus = false;
   lastReceived = millis();
   receivedAny = false;
-
+  wdt_enable(WDTO_8S);
 }
 
 /**
@@ -205,16 +198,16 @@ void setup()
  */
 void loop()
 {
-  //Check server connection
-  if (millis() - lastCheck > 30000)
-  {
-    ledState(1);
-    watchdogReset();
-  }
-  else
-  {
-    ledState(0);
-  }
+//  //Check server connection
+//  if (millis() - lastCheck > 30000)
+//  {
+//    ledState(1);
+//    watchdogReset();
+//  }
+//  else
+//  {
+//    ledState(0);
+//  }
   //Check MQTT messages
   gateway.loop();
   routing->loop();
