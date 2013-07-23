@@ -259,6 +259,7 @@ public:
   parentSensor(char * name):   
   CoapSensor(name)
   {  
+      this->set_notify_time(300);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -274,6 +275,7 @@ public:
   memorySensor(char * name):   
   CoapSensor(name)
   {  
+      this->set_notify_time(300);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
