@@ -22,7 +22,7 @@
 #include <avr/wdt.h>
 //Include CoAP Libraries
 #include <coap.h>
-#include "mySensor.h"
+#include <UberdustSensors.h>
 
 //Create the XbeeRadio object we'll be using
 XBeeRadio xbee = XBeeRadio();
@@ -34,7 +34,7 @@ Coap coap;
 //Message Routing
 BaseRouting * routing;
 long blinkTime;
-//parentSensor* parent;
+parentSensor* parent;
 
 /**
  */
@@ -44,9 +44,12 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
 
 //Runs only once
 void setup() {
+  wdt_reset();
+  pinMode(13,OUTPUT);
+
   blinkTime=millis();
 
-  // comment out for debuging
+  //Connect to XBee
   xbee.initialize_xbee_module();
   //start our XbeeRadio object and set our baudrate to 38400.
   xbee.begin(38400);
@@ -75,13 +78,14 @@ void setup() {
   add_relays();
   add_sensors();
 
-  //  parent = new parentSensor("parent");
-  //  coap.add_resource(parent);
+  char parent_name[7];
+  strcpy(parent_name,"parent");
+  parent = new parentSensor(parent_name);
+  coap.add_resource(parent);
 
 
   wdt_disable();
   wdt_enable(WDTO_8S);
-
 }
 
 void loop() {
@@ -97,18 +101,20 @@ void loop() {
     if (millis()-blinkTime<5000-50){
       digitalWrite(13,LOW);
     }
-    else{
+    else{      
       digitalWrite(13,HIGH);
     }
+    if (millis()-blinkTime>5000){
+      parent->parent_=routing->parent();
+      blinkTime=millis();
+    }
   }
-
   wdt_reset();
-  //  parent->set_parent(routing->parent());
 }
 
 uint8_t getNumOfRelays(int relayCheckPin) {
   uint8_t relays[] = {
-    0, 0, 0, 0, 0, 0               };
+    0, 0, 0, 0, 0, 0  };
   for (int i = 0; i < 10; i++) {
     relays[getNumOfRels(relayCheckPin)]++;
   }
@@ -126,8 +132,8 @@ uint8_t getNumOfRels(int relayCheckPin) {
   delay(10);
   int relNum = 0;
   int distance[5];
-  int thresholds[] = {
-    0, 342, 512, 614, 683, 732           };
+  int thresholds[] = {    
+    0, 342, 512, 614, 683, 732 };
   for (int i = 0; i < 6; i++) {
     thresholds[i] < value ? distance[i] = value - thresholds[i] : distance[i] = thresholds[i] - value;
   }
@@ -177,17 +183,4 @@ void add_sensors() {
     coap.add_resource(pSensor);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
