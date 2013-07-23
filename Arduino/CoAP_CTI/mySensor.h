@@ -17,6 +17,7 @@ public:
     this->status = 0;
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
+    this->set_notify_time(300);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -61,6 +62,7 @@ public:
     pinMode(pin, INPUT);
     digitalWrite(pin, pullup);
     this->status = 0;
+    this->set_notify_time(300);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -88,6 +90,7 @@ public:
   {
     this->pin = pin;
     this->status = 0;
+    this->set_notify_time(300);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -119,6 +122,7 @@ public:
   {
     this->pin = pin;
     this->status = 0;
+    this->set_notify_time(300);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
