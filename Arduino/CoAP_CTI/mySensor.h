@@ -256,22 +256,18 @@ public:
   CoapSensor(name)
   {  
   }
-  void set_parent(uint16_t parent){
-    parent_=parent;
-  }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
     *output_data_len = sprintf( (char*)output_data, "0x%x", parent_); 
   }
-private :
   uint16_t parent_;
 };
 
-class parentSensor : 
+class memorySensor : 
 public CoapSensor 
 {
 public:
-  parentSensor(char * name):   
+  memorySensor(char * name):   
   CoapSensor(name)
   {  
   }
