@@ -7,7 +7,7 @@
 #define USE_TREE_ROUTING
 
 //The TestbedID to use for the connection
-#define TESTBED_ID 6
+#define TESTBED_ID 1
 #define CHANNEL 12
 
 //Software Reset
@@ -135,7 +135,11 @@ void setup()
   Serial.end();
 
   //Connect to XBee
+  wdt_enable(WDTO_8S);
   xbee.initialize_xbee_module();
+  wdt_reset();
+  wdt_disable();
+
   xbee.begin(38400);
   //Initialize our XBee module with the correct values using channel 12
   xbee.init(CHANNEL);
