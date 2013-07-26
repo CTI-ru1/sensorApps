@@ -6,6 +6,7 @@
 #include <BaseRouting.h>
 #include "tree_routing_message.h"
 #include "tree_broadcast_message.h"
+#include <avr/wdt.h>
 
 #define MAX_CHILDREN 5
 
