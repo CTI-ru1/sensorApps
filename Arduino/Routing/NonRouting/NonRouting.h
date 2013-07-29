@@ -35,6 +35,8 @@ public:
 
     void set_message_received_callback(void (*received_callback)(uint16_t, byte*, unsigned int));
 
+    uint16_t parent(){return 0;};
+
 private:
     void (*received_callback_)(uint16_t, byte*, unsigned int);
     void radio_send(uint16_t, byte*, unsigned int);
