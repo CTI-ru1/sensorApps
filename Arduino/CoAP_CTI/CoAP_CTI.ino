@@ -34,11 +34,12 @@ Coap coap;
 //Message Routing
 BaseRouting * routing;
 long blinkTime;
-parentSensor* parent;
+//parentSensor* parent;
 
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
+
   coap.receiver(payload, sender, length);
 }
 
@@ -46,7 +47,7 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
 void setup() {
   wdt_reset();
   pinMode(13,OUTPUT);
-
+digitalWrite(13,HIGH);
   blinkTime=millis();
 
   //Connect to XBee
@@ -62,6 +63,7 @@ void setup() {
   routing = new NonRouting(&xbee);
 #endif 
   routing->set_sink(false);
+digitalWrite(13,LOW);
 
   uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
   uint8_t * bit = ((uint8_t*) & address);
@@ -78,11 +80,10 @@ void setup() {
   add_relays();
   add_sensors();
 
-  char parent_name[7];
-  strcpy(parent_name,"parent");
-  parent = new parentSensor(parent_name);
-  coap.add_resource(parent);
-
+//  char parent_name[7];
+//  strcpy(parent_name,"parent");
+//  parent = new parentSensor(parent_name);
+  //coap.add_resource(parent);
 
   wdt_disable();
   wdt_enable(WDTO_8S);
@@ -93,7 +94,7 @@ void loop() {
   coap.handler();
 
   routing->loop();
-
+/*
   if (routing->state()==2){
     digitalWrite(13,HIGH);
   }
@@ -105,10 +106,10 @@ void loop() {
       digitalWrite(13,HIGH);
     }
     if (millis()-blinkTime>5000){
-      parent->parent_=routing->parent();
+      //parent->parent_=routing->parent();
       blinkTime=millis();
     }
-  }
+  }*/
   wdt_reset();
 }
 
@@ -173,8 +174,8 @@ void add_sensors() {
     //coap.add_resource(swSensor);
     temperatureSensor* tempSensor = new temperatureSensor("temp", TEMP_PIN);
     coap.add_resource(tempSensor);
-    lightSensor* liSensor = new lightSensor("light", LIGHT_PIN);
-    coap.add_resource(liSensor);
+    //lightSensor* liSensor = new lightSensor("light", LIGHT_PIN);
+    //coap.add_resource(liSensor);
     //methaneSensor* mh4Sensor = new methaneSensor("methane", METHANE_PIN);
     //coap.add_resource(mh4Sensor);
     //carbonSensor* coSensor = new carbonSensor("carbon", CARBON_PIN, HEATER_PIN);

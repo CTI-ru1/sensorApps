@@ -33,7 +33,8 @@ public:
   void set_value(uint8_t* input_data, size_t input_data_len, uint8_t* output_data, size_t* output_data_len)
   {
     this->set(*input_data-0x30);
-    output_data[0] = 0x30 + status;
+    this->changed = true;
+    output_data[0] = *input_data;
     *output_data_len = 1;
   }
   inline void set(uint8_t value)
