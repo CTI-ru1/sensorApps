@@ -68,24 +68,34 @@ long lastReceived;
  */
 void callback(char* topic, byte* payload, unsigned int length)
 {
+  gateway.incy();
 //  lastCheck = millis();
   if (strcmp(topic, "heartbeat") == 0)
   {
     if (strncmp((char *)payload, "reset",5)==0){
       //lastCheck = millis();
       wdt_reset();
+      digitalWrite(9,HIGH);
+      delay(10);
+      digitalWrite(9,LOW);
+    }
+    if (gateway.checkReset((char*)payload)){
+      watchdogReset();
     }
   }
-  else
+  else if (strcmp(topic, "arduinoGateway") == 0)
   {
-    routing->send( *((uint16_t*)payload) , &(payload[2]),length-2);
-    //TODO: actually check for topic : arduinoGateway
+      digitalWrite(8,HIGH);
+      delay(10);
+      digitalWrite(8,LOW);
+      routing->send( *((uint16_t*)payload) , &(payload[2]),length-2);
   }
 }
 
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
+  gateway.incx();
   receivedAny = true;
   sprintf(address, "%x", sender);
   gateway.publish(sender, payload, length);
@@ -135,14 +145,18 @@ void setup()
   Serial.end();
 
   //Connect to XBee
-  wdt_enable(WDTO_8S);
-  xbee.initialize_xbee_module();
+  //wdt_enable(WDTO_8S);
   wdt_reset();
   wdt_disable();
-
+  xbee.initialize_xbee_module();
+  
   xbee.begin(38400);
+  //wdt_reset();
+  //wdt_disable();
   //Initialize our XBee module with the correct values using channel 12
+  //  xbee.init();
   xbee.init(CHANNEL);
+
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
   routing = new TreeRouting(&xbee);

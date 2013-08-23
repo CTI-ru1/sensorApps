@@ -12,7 +12,9 @@ class UberdustGateway {
 
 public:
   UberdustGateway(EthernetClient *ethernetClient):  
-  gatewayID(0){
+  gatewayID(0),
+  xcounter(0),
+  ycounter(0){
     this->ethernetClient =ethernetClient ; 
   };
 
@@ -27,6 +29,12 @@ public:
 
   void pongServer();
 
+  char * resetCode();
+  
+boolean checkReset(char * payload);
+  void incx();
+  void incy();
+
 protected:
 
 private:
@@ -36,11 +44,16 @@ private:
   byte * uberdustServer;
   char outTopic[20] ;
   char uid[20];
+  char resetuid[23];
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
   //XBeeRadio * xbee;
+  long xcounter,ycounter;
+ int rscount;
 
 };
+
+
 
 
 

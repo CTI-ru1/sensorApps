@@ -16,6 +16,7 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
 
   mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
   sprintf(uid,"arduinoGateway%x",gatewayID);
+  rscount = sprintf(resetuid,"reset%x",gatewayID);
   if (mqttClient->connect(uid)) {
     //TODO: send a message to declare my existence - if needed
     //client.publish(uid,"hereiam");
@@ -49,5 +50,30 @@ void UberdustGateway::publish(uint16_t address, uint8_t * message,uint8_t length
 
 void UberdustGateway::pongServer(){
   mqttClient->publish("heartbeat",uid);
+  char counter[20];
+  sprintf(counter,"xmess:%x:%d",gatewayID,xcounter);
+  mqttClient->publish("heartbeat",counter);
+  xcounter=0;
+  sprintf(counter,"ymess:%x:%d",gatewayID,ycounter);
+  ycounter=0;
+  mqttClient->publish("heartbeat",counter);
 }
+
+char * UberdustGateway::resetCode(){
+  return resetuid;
+}
+
+void UberdustGateway::incx(){
+  xcounter++;
+};
+void UberdustGateway::incy(){
+  ycounter++;
+};
+
+
+boolean UberdustGateway::checkReset(char * payload){
+  return strncmp(resetuid,payload,rscount)==0;
+};
+
+
 
