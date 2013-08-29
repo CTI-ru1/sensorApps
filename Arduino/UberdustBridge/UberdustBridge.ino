@@ -42,6 +42,24 @@ BaseRouting * routing;
 #include "UberdustGateway.h"
 UberdustGateway gateway(&ethernetClient);
 
+uint16_t devices[20];
+void add_device(uint16_t device){
+  for (int i=0;i<20;i++){
+    if (devices[i]==device)return;
+  }
+  for (int i=0;i<20;i++){
+    if (devices[i]==0){
+      devices[i]=device;
+      return;
+    }
+  }
+}
+boolean check_device(uint16_t device){
+  for (int i=0;i<20;i++){
+    if (devices[i]==device)return true;
+  }
+  return false;
+}
 
 // Update these with values suitable for your network/broker.
 byte mac[]    =
@@ -69,7 +87,7 @@ long lastReceived;
 void callback(char* topic, byte* payload, unsigned int length)
 {
   gateway.incy();
-//  lastCheck = millis();
+  //  lastCheck = millis();
   if (strcmp(topic, "heartbeat") == 0)
   {
     if (strncmp((char *)payload, "reset",5)==0){
@@ -85,10 +103,11 @@ void callback(char* topic, byte* payload, unsigned int length)
   }
   else if (strcmp(topic, "arduinoGateway") == 0)
   {
-      digitalWrite(8,HIGH);
-      delay(10);
-      digitalWrite(8,LOW);
-      routing->send( *((uint16_t*)payload) , &(payload[2]),length-2);
+    if (!check_device(*((uint16_t*)payload))) return;
+    digitalWrite(8,HIGH);
+    delay(10);
+    digitalWrite(8,LOW);
+    routing->send( *((uint16_t*)payload) , &(payload[2]),length-2);
   }
 }
 
@@ -97,6 +116,7 @@ void callback(char* topic, byte* payload, unsigned int length)
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
   gateway.incx();
   receivedAny = true;
+  add_device(sender);
   sprintf(address, "%x", sender);
   gateway.publish(sender, payload, length);
 }
@@ -148,8 +168,13 @@ void setup()
   //wdt_enable(WDTO_8S);
   wdt_reset();
   wdt_disable();
+
+  for (int i=0;i<20;i++){
+    devices[i]=0;
+  }
+
   xbee.initialize_xbee_module();
-  
+
   xbee.begin(38400);
   //wdt_reset();
   //wdt_disable();
@@ -201,7 +226,7 @@ void setup()
 
   }
   //Initialize variables
-//  lastCheck = millis();
+  //  lastCheck = millis();
   lastReceivedStatus = false;
   lastReceived = millis();
   receivedAny = false;
@@ -216,16 +241,16 @@ void setup()
  */
 void loop()
 {
-//  //Check server connection
-//  if (millis() - lastCheck > 30000)
-//  {
-//    ledState(1);
-//    watchdogReset();
-//  }
-//  else
-//  {
-//    ledState(0);
-//  }
+  //  //Check server connection
+  //  if (millis() - lastCheck > 30000)
+  //  {
+  //    ledState(1);
+  //    watchdogReset();
+  //  }
+  //  else
+  //  {
+  //    ledState(0);
+  //  }
   //Check MQTT messages
   gateway.loop();
   routing->loop();
