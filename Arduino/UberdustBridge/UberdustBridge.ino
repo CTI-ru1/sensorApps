@@ -173,7 +173,7 @@ void setup()
     devices[i]=0;
   }
 
-  xbee.initialize_xbee_module();
+  //xbee.initialize_xbee_module();
 
   xbee.begin(38400);
   //wdt_reset();
