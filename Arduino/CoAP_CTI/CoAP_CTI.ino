@@ -128,7 +128,6 @@ uint8_t getNumOfRels(int relayCheckPin) {
 void add_relays() {
 #define RELAY_CHECK_PIN A4
   int numOfRelays = getNumOfRelays(RELAY_CHECK_PIN);
-  numOfRelays = 5;
   for (int i = 0; i < numOfRelays; i++) {
 #define RELAY_START_PIN 2
     char name [4];
