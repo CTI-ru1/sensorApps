@@ -3,7 +3,7 @@
 void TreeRouting::loop() {
     if (xbee->checkForData(112)) {
         //Create a reusable rx16 response object to get the address
-        wdt_reset();
+        //wdt_reset();
         Rx16Response rx = Rx16Response();
         xbee->getResponse().getRx16Response(rx);
         uint8_t rssi = rx.getRssi();
