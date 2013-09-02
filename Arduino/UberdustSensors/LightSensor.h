@@ -19,14 +19,10 @@ public:
   void check(void)
   {
     static unsigned long timestamp = 0;
-    if(millis() - timestamp > 500)
+    if(millis() - timestamp > 5000)
     {
       int newStatus = analogRead(this->pin);  // read the value from the sensor
-      if(newStatus > this->status + 10 || newStatus < this->status - 10 )
-      {
-        this->changed = true;
-        this->status = newStatus;
-      }
+      this->status = newStatus;
       timestamp = millis();
     }
   }

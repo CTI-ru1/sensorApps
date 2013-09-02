@@ -27,7 +27,6 @@ public:
       newStatus = ((newStatus/1024)* 5000)/10/100;  
       if(newStatus != this->status)
       {
-        this->changed = true;
         this->status = newStatus;
       }
       timestamp = millis();
