@@ -6,7 +6,7 @@ public:
     int pin, status;
     Sensor *Sen ;
 
-    Indicate(String name, int pin, Sensor *Sen) : CoapSensor(name) {
+    Indicate(char * name, int pin, Sensor *Sen) : CoapSensor(name) {
         this->pin = pin;
         pinMode(pin, OUTPUT);
 	this->status = 0;

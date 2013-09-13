@@ -6,7 +6,7 @@ class Relay : public CoapSensor
 public:
 int pin, status;
 Sensor * sensor;
-  Relay(String name,int pin, Sensor * sensor): CoapSensor(name)
+  Relay(char * name,int pin, Sensor * sensor): CoapSensor(name,60)
   {
     this->pin = pin;
     pinMode(pin, OUTPUT);
@@ -22,21 +22,19 @@ Sensor * sensor;
     this->set(*input_data-0x30);
     output_data[0] = 0x30 + status;
     *output_data_len = 1;
-    this->sensor->check();
-  }
-  void set(uint8_t value)
-  {
-    this->status = value;
-    //Rel->state=value;
-  }
-  void check(){
-    if (this->status==HIGH){
+ if (this->status==HIGH){
       this->status = HIGH;
     }
     if(this->status==LOW){
       this->status=LOW;
     } 
-    digitalWrite(this->pin,this->status);
+    this->changed=true;
+    digitalWrite(this->pin,this->status);  }
+  void set(uint8_t value)
+  {
+    this->status = value;
+    //Rel->state=value;
   }
+
 
 };
