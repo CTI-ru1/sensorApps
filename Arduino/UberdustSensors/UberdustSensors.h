@@ -9,3 +9,4 @@
 #include "SwitchSensor.h"
 #include "TemperatureSensor.h"
 #include "ZoneSensor.h"
+#include "UltrasonicSensor.h"
