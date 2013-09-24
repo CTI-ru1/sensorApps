@@ -36,7 +36,7 @@ Rx16Response rx;
 #include <BaseRouting.h>
 #include <TreeRouting.h>
 #include <NonRouting.h>
-BaseRouting * routing;
+BaseRouting * radio;
 
 //Helper Class
 #include "UberdustGateway.h"
@@ -87,9 +87,14 @@ long lastReceived;
 void callback(char* topic, byte* payload, unsigned int length)
 {
   gateway.incy();
+  check_heartbeat(topic,payload,length);
+  check_xbee(topic,payload,length);
+}
+
+void check_heartbeat(char* topic, byte* payload, unsigned int length)
+{
   //  lastCheck = millis();
-  if (strcmp(topic, "heartbeat") == 0)
-  {
+  if (strcmp(topic, "heartbeat") == 0){
     if (strncmp((char *)payload, "reset",5)==0){
       //lastCheck = millis();
       wdt_reset();
@@ -101,14 +106,18 @@ void callback(char* topic, byte* payload, unsigned int length)
       watchdogReset();
     }
   }
-  else if (strcmp(topic, "arduinoGateway") == 0)
-  {
+}
+
+
+void check_xbee(char* topic, byte* payload, unsigned int length)
+{
+  if (gateway.checkForMe((char*)payload)){
     if (!check_device(*((uint16_t*)payload))) return;
     digitalWrite(8,HIGH);
     delay(10);
     digitalWrite(8,LOW);
-    routing->send( *((uint16_t*)payload) , &(payload[2]),length-2);
-  }
+    radio->send( *((uint16_t*)payload) , &(payload[2]),length-2);
+  }  
 }
 
 /**
@@ -184,11 +193,11 @@ void setup()
 
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
-  routing = new TreeRouting(&xbee);
+  radio = new TreeRouting(&xbee);
 #else 
-  routing = new NonRouting(&xbee);
+  radio = new NonRouting(&xbee);
 #endif 
-  routing->set_sink(true);
+  radio->set_sink(true);
 
   uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
   uint8_t * bit = ((uint8_t*) & address);
@@ -196,8 +205,8 @@ void setup()
   uint8_t lbyte = bit[0];
   bit[0] = mbyte;
   bit[1] = lbyte;
-  routing->set_my_address(address);
-  routing->set_message_received_callback(radio_callback);
+  radio->set_my_address(address);
+  radio->set_message_received_callback(radio_callback);
 
   ledState(1);
 
@@ -207,7 +216,7 @@ void setup()
   mac[5] = (&my_address)[0];
   //memcpy(mac + 4, &my_address, 2);
 
-  //routing = new TreeRouting(&xbee,true);
+  //radio = new TreeRouting(&xbee,true);
   //Connect to Network
   if (Ethernet.begin(mac)==0){  
     //Software Reset
@@ -241,19 +250,9 @@ void setup()
  */
 void loop()
 {
-  //  //Check server connection
-  //  if (millis() - lastCheck > 30000)
-  //  {
-  //    ledState(1);
-  //    watchdogReset();
-  //  }
-  //  else
-  //  {
-  //    ledState(0);
-  //  }
   //Check MQTT messages
   gateway.loop();
-  routing->loop();
+  radio->loop();
 
   //Blink on network traffic
   if (millis() - lastReceived > 5000)
@@ -267,7 +266,7 @@ void loop()
   }
 }
 
-
+#warning should use check not loop
 /**
  * Sofrware Reset using watchdogTimer
  */

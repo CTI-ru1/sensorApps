@@ -31,7 +31,9 @@ public:
 
   char * resetCode();
   
-boolean checkReset(char * payload);
+  boolean checkReset(char * payload);
+  boolean checkForMe(char * payload);
+  
   void incx();
   void incy();
 
@@ -42,30 +44,13 @@ private:
   int gatewayID;
   long lastPong;
   byte * uberdustServer;
-  char outTopic[20] ;
-  char uid[20];
-  char resetuid[23];
+  char _uid[20],_message_bus[20],_reset_id[23];
+  int _uid_count,_message_bus_count,_reset_id_count;
+  
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
   //XBeeRadio * xbee;
-  long xcounter,ycounter;
- int rscount;
+  unsigned long xcounter,ycounter;
+ 
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
