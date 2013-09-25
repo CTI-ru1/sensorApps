@@ -4,7 +4,7 @@
  - publishes coap messages to the topic "testbed#"
  - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
  */
-#define USE_TREE_ROUTING
+//#define USE_TREE_ROUTING
 
 //The TestbedID to use for the connection
 #define TESTBED_ID 1

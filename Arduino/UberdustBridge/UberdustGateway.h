@@ -1,4 +1,3 @@
-
 //mqtt
 #include <PubSubClient.h>
 //ethernet
@@ -6,6 +5,7 @@
 #include <Ethernet.h>
 #include <XBee.h>
 #include <XbeeRadio.h>
+#include "credentials.h"
 
 
 class UberdustGateway {

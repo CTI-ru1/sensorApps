@@ -17,7 +17,11 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
   mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
   sprintf(uid,"arduinoGateway%x",gatewayID);
   rscount = sprintf(resetuid,"reset%x",gatewayID);
+#ifdef MQTT_USERNAME
+  if (mqttClient->connect(uid,MQTT_USERNAME,MQTT_PASSWORD)) {
+#else
   if (mqttClient->connect(uid)) {
+#endif  
     //TODO: send a message to declare my existence - if needed
     //client.publish(uid,"hereiam");
     mqttClient->subscribe("arduinoGateway");
