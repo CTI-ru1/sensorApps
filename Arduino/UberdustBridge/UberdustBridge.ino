@@ -71,6 +71,7 @@ byte uberdustServer[] =
 {
   150, 140, 5, 20
 };
+//IPAddress ip(150, 140, 5, 80);
 
 // global variables
 char address[20];
@@ -209,6 +210,7 @@ void setup()
 
   //routing = new TreeRouting(&xbee,true);
   //Connect to Network
+//  Ethernet.begin(mac,ip);
   if (Ethernet.begin(mac)==0){  
     //Software Reset
     ledState(2);
