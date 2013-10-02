@@ -8,7 +8,7 @@
 
 //The TestbedID to use for the connection
 #define TESTBED_ID 1
-#define CHANNEL 12
+#define CHANNEL 13
 
 //Software Reset
 #include <avr/wdt.h>
@@ -69,7 +69,7 @@ byte mac[]    =
 
 byte uberdustServer[] =
 {
-  150, 140, 5, 20
+  150, 140, 5, 11
 };
 
 // global variables

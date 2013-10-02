@@ -1,6 +1,6 @@
 #include "UberdustGateway.h"
 
-void UberdustGateway::setTestbedID(int testbedID){
+void UberdustGateway::setTestbedID(uint32_t testbedID){
   this->testbedID=testbedID;
 }
 void UberdustGateway::setUberdustServer(byte * uberdustServer){
@@ -14,7 +14,10 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
   lastPong=millis();
 
   mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
-  _uid_count= sprintf(_uid,"%x",gatewayID);
+  _uid_count= 1+sizeof(uint16_t) + sizeof(uint32_t); //sprintf(_uid,"%x",gatewayID);
+  _uid[0]=1;
+  memcpy(_uid+1,&gatewayID, sizeof(uint16_t));
+  memcpy(_uid+1+sizeof(uint16_t), &testbedID, sizeof(uint32_t));
   _message_bus_count= sprintf(_message_bus,"ag%s",_uid);
   _reset_id_count= sprintf(_reset_id,"reset%x",gatewayID);
   if (mqttClient->connect(_message_bus)) {
@@ -22,7 +25,8 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
     //client.publish(uid,"hereiam");
     mqttClient->subscribe("heartbeat");
     mqttClient->subscribe(_message_bus);
-    mqttClient->publish("connect",_uid);
+    mqttClient->publish("connect",_uid,_uid_count);
+    _uid[0]=0;
   }
 }
 
@@ -48,14 +52,15 @@ void UberdustGateway::publish(uint16_t address, uint8_t * message,uint8_t length
 } 
 
 void UberdustGateway::pongServer(){
-  mqttClient->publish("connect",_uid);
-  char counter[20];
-  sprintf(counter,"stats:%s:x:%ld",_uid,xcounter);
-  mqttClient->publish("heartbeat",counter);
+  mqttClient->publish("connect",_uid,_uid_count);
+  byte message [_uid_count + 20];
+  memcpy(message,_uid,_uid_count);
+  int count = sprintf((char*)message+7,":x:%ld",_uid,xcounter);  
+  mqttClient->publish("stats",message,_uid_count + count);
   xcounter=0;
-  sprintf(counter,"stats:%s:y:%ld",_uid,ycounter);
+  count =  sprintf((char*)message+7,":y:%ld",_uid,ycounter);
   ycounter=0;
-  mqttClient->publish("heartbeat",counter);
+  mqttClient->publish("stats",message,_uid_count + count);
 }
 
 char * UberdustGateway::resetCode(){
@@ -74,8 +79,10 @@ boolean UberdustGateway::checkReset(char * payload){
 };
 
 boolean UberdustGateway::checkForMe(char * payload){
-  return strncmp(_uid,payload,_uid_count)==0;
+  //TODO :FIX
+  return false;//strncmp(_uid,payload,_uid_count)==0;
 };
+
 
 
 
