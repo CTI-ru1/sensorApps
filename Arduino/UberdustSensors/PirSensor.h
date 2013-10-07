@@ -20,7 +20,7 @@ public:
   void check(void)
   {
     static unsigned long timestamp = 0;
-    if(millis() - timestamp > 500)
+    if(millis() - timestamp > 1000)
     {
       int newStatus = !digitalRead(this->pin); // read the value from the sensor
       if(newStatus != this->status)
