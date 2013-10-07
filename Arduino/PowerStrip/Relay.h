@@ -10,7 +10,8 @@ Sensor * sensor;
   {
     this->pin = pin;
     pinMode(pin, OUTPUT);
-    this->status = 0;
+    this->status = 1;
+    set(1);
     this->sensor = sensor;
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)

@@ -12,7 +12,7 @@
  */
 
 #define USE_TREE_ROUTING
-//#define REMOTE_RESET
+#define REMOTE_RESET
 
 
 //Include XBEE Libraries
@@ -95,11 +95,11 @@ void loop() {
 
 void add_relays() {
     char name1 [4];
-    sprintf(name1,"lz1");
+    sprintf(name1,"ac1");
     zoneSensor * acZone1  = new zoneSensor(name1, 2);
     coap.add_resource(acZone1);
     char name2 [4];
-    sprintf(name2,"lz2");
+    sprintf(name2,"ac2");
     zoneSensor * acZone2  = new zoneSensor(name2, 3);
     coap.add_resource(acZone2);
 }
