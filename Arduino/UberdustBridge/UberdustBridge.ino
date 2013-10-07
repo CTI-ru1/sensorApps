@@ -8,7 +8,7 @@
 
 //The TestbedID to use for the connection
 #define TESTBED_ID 1
-#define CHANNEL 13
+#define CHANNEL 12
 
 //Software Reset
 #include <avr/wdt.h>
@@ -184,13 +184,14 @@ void setup()
 
   //xbee.initialize_xbee_module();
 
+  wdt_enable(WDTO_8S);
   xbee.begin(38400);
   //wdt_reset();
   //wdt_disable();
   //Initialize our XBee module with the correct values using channel 12
   //  xbee.init();
   xbee.init(CHANNEL);
-
+  wdt_reset();
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
   radio = new TreeRouting(&xbee);
@@ -215,7 +216,7 @@ void setup()
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
   //memcpy(mac + 4, &my_address, 2);
-
+  wdt_reset();
   //radio = new TreeRouting(&xbee,true);
   //Connect to Network
   if (Ethernet.begin(mac)==0){  
@@ -225,6 +226,7 @@ void setup()
   }
   else
   {
+    wdt_reset();
     //Connect to MQTT broker
     ledState(0);
     gateway.setUberdustServer(uberdustServer);
@@ -232,8 +234,8 @@ void setup()
     gateway.setTestbedID(TESTBED_ID);
     gateway.connect(callback);
     gateway.pongServer();
-
   }
+  wdt_reset();
   //Initialize variables
   //  lastCheck = millis();
   lastReceivedStatus = false;

@@ -55,10 +55,16 @@ void UberdustGateway::pongServer(){
   mqttClient->publish("connect",_uid,_uid_count);
   byte message [_uid_count + 20];
   memcpy(message,_uid,_uid_count);
-  int count = sprintf((char*)message+7,":x:%ld",_uid,xcounter);  
+  int count = sprintf((char*)message+7,":xbee:%ld",xcounter);  
   mqttClient->publish("stats",message,_uid_count + count);
   xcounter=0;
-  count =  sprintf((char*)message+7,":y:%ld",_uid,ycounter);
+  count =  sprintf((char*)message+7,":mqtt:%ld",ycounter);
+  ycounter=0;
+  mqttClient->publish("stats",message,_uid_count + count);
+  count =  sprintf((char*)message+7,":addr:%4x",gatewayID);
+  ycounter=0;
+  mqttClient->publish("stats",message,_uid_count + count);
+  count =  sprintf((char*)message+7,":testbed:%4x",testbedID);
   ycounter=0;
   mqttClient->publish("stats",message,_uid_count + count);
 }
