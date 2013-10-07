@@ -13,6 +13,7 @@
 
 #define USE_TREE_ROUTING
 
+#define REMOTE_RESET
 //Include XBEE Libraries
 #include <XBee.h>
 #include <XbeeRadio.h>
@@ -52,7 +53,7 @@ void setup() {
   blinkTime=millis();
 
   //Connect to XBee
-  xbee.initialize_xbee_module();
+  //xbee.initialize_xbee_module();
   //start our XbeeRadio object and set our baudrate to 38400.
   xbee.begin(38400);
   //Initialize our XBee module with the correct values (using the default channel, channel 12)h
@@ -128,6 +129,7 @@ uint8_t getNumOfRels(int relayCheckPin) {
 void add_relays() {
 #define RELAY_CHECK_PIN A4
   int numOfRelays = getNumOfRelays(RELAY_CHECK_PIN);
+  //int numOfRelays = 5;
   for (int i = 0; i < numOfRelays; i++) {
 #define RELAY_START_PIN 2
     char name [4];
