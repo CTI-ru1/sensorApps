@@ -4,7 +4,7 @@
  - publishes coap messages to the topic "testbed#"
  - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
  */
-//#define USE_TREE_ROUTING
+#define USE_TREE_ROUTING
 
 //The TestbedID to use for the connection
 #define TESTBED_ID 1
@@ -169,6 +169,7 @@ void setup()
   //wdt_enable(WDTO_8S);
   wdt_reset();
   wdt_disable();
+  wdt_enable(WDTO_8S);
 
   for (int i=0;i<20;i++){
     devices[i]=0;
@@ -182,6 +183,7 @@ void setup()
   //Initialize our XBee module with the correct values using channel 12
   //  xbee.init();
   xbee.init(CHANNEL);
+  wdt_reset();
 
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
@@ -201,6 +203,7 @@ void setup()
   routing->set_message_received_callback(radio_callback);
 
   ledState(1);
+  wdt_reset();
 
   //Generate Unique mac based on xbee address
   uint16_t my_address = address;
@@ -210,7 +213,7 @@ void setup()
 
   //routing = new TreeRouting(&xbee,true);
   //Connect to Network
-//  Ethernet.begin(mac,ip);
+  //  Ethernet.begin(mac,ip);
   if (Ethernet.begin(mac)==0){  
     //Software Reset
     ledState(2);
@@ -218,6 +221,7 @@ void setup()
   }
   else
   {
+    wdt_reset();
     //Connect to MQTT broker
     ledState(0);
     gateway.setUberdustServer(uberdustServer);
@@ -227,6 +231,7 @@ void setup()
     gateway.pongServer();
 
   }
+  wdt_reset();
   //Initialize variables
   //  lastCheck = millis();
   lastReceivedStatus = false;
@@ -295,5 +300,6 @@ void bootblink()
     delay(300);
   }
 }
+
 
 
