@@ -18,7 +18,7 @@ public:
     this->ethernetClient =ethernetClient ; 
   };
 
-  void setTestbedID(uint32_t testbedID);
+  void setTestbedID(char* testbedID);
   void setUberdustServer(byte * uberdustServer);
   void setGatewayID(uint16_t gatewayID);
   void connect( void callback(char*, uint8_t*, unsigned int));
@@ -40,13 +40,12 @@ public:
 protected:
 
 private:
-  uint32_t testbedID;
-  uint16_t gatewayID;
+  char* testbedID;
+  uint16_t gatewayID;  
   long lastPong;
   byte * uberdustServer;
-  byte _uid[1+sizeof(uint32_t)+sizeof(uint16_t)];
-  char _message_bus[20],_reset_id[23];
-  int _uid_count,_message_bus_count,_reset_id_count;
+  char _message_bus[50];
+  int _message_bus_count;
   
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;

@@ -1,6 +1,6 @@
 #include "UberdustGateway.h"
 
-void UberdustGateway::setTestbedID(uint32_t testbedID){
+void UberdustGateway::setTestbedID(char* testbedID){
   this->testbedID=testbedID;
 }
 void UberdustGateway::setUberdustServer(byte * uberdustServer){
@@ -11,23 +11,30 @@ void UberdustGateway::setGatewayID(uint16_t gatewayID){
 }
 
 void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
-  lastPong=millis();
-
   mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
-  _uid_count= 1+sizeof(uint16_t) + sizeof(uint32_t); //sprintf(_uid,"%x",gatewayID);
-  _uid[0]=1;
-  memcpy(_uid+1,&gatewayID, sizeof(uint16_t));
-  memcpy(_uid+1+sizeof(uint16_t), &testbedID, sizeof(uint32_t));
-  _message_bus_count= sprintf(_message_bus,"ag%s",_uid);
-  _reset_id_count= sprintf(_reset_id,"reset%x",gatewayID);
-  if (mqttClient->connect(_message_bus)) {
-    //TODO: send a message to declare my existence - if needed
-    //client.publish(uid,"hereiam");
+
+  _message_bus_count= sprintf(_message_bus,"%s,%d",testbedID,gatewayID);
+
+  char receive_bus[50];
+  sprintf(receive_bus,"s%s,%d",testbedID,gatewayID);
+
+
+  if (mqttClient->connect("heartbeat")) {
+
+    //subscribe to heartbeats
     mqttClient->subscribe("heartbeat");
-    mqttClient->subscribe(_message_bus);
-    mqttClient->publish("connect",_uid,_uid_count);
-    _uid[0]=0;
+    //subscribe to messages
+    mqttClient->subscribe(receive_bus);
+    
+    {//sendConnect
+      char firstConnect[50];
+      uint8_t len = sprintf(firstConnect,"1,%s,%d",testbedID,gatewayID);
+      mqttClient->publish("connect",(uint8_t*)firstConnect,len);
+      lastPong=millis();
+    }
+    
   }
+
 }
 
 void UberdustGateway::loop(){
@@ -51,26 +58,25 @@ void UberdustGateway::publish(uint16_t address, uint8_t * message,uint8_t length
   mqttClient->publish(_message_bus,data,length+2);
 } 
 
-void UberdustGateway::pongServer(){
-  mqttClient->publish("connect",_uid,_uid_count);
-  byte message [_uid_count + 20];
-  memcpy(message,_uid,_uid_count);
-  int count = sprintf((char*)message+7,":xbee:%ld",xcounter);  
-  mqttClient->publish("stats",message,_uid_count + count);
-  xcounter=0;
-  count =  sprintf((char*)message+7,":mqtt:%ld",ycounter);
-  ycounter=0;
-  mqttClient->publish("stats",message,_uid_count + count);
-  count =  sprintf((char*)message+7,":addr:%4x",gatewayID);
-  ycounter=0;
-  mqttClient->publish("stats",message,_uid_count + count);
-  count =  sprintf((char*)message+7,":testbed:%4x",testbedID);
-  ycounter=0;
-  mqttClient->publish("stats",message,_uid_count + count);
-}
 
-char * UberdustGateway::resetCode(){
-  return _reset_id;
+
+
+void UberdustGateway::pongServer(){
+  {//sendConnect
+    char firstConnect[50];
+    uint8_t len = sprintf(firstConnect,"0,%s,%d",testbedID,gatewayID);
+    mqttClient->publish("connect",(uint8_t*)firstConnect,len);
+    lastPong=millis();
+  }
+  {//sendConnect
+    char stats[50];
+    uint8_t len = sprintf(stats,"%s,%d,xbee,%ld",testbedID,gatewayID,xcounter);
+    mqttClient->publish("stats",(uint8_t*)stats,len);
+    xcounter=0;
+    len = sprintf(stats,"%s,%d,mqtt,%ld",testbedID,gatewayID,ycounter);
+    mqttClient->publish("stats",(uint8_t*)stats,len);
+    ycounter=0;
+  }
 }
 
 void UberdustGateway::incx(){
@@ -81,13 +87,18 @@ void UberdustGateway::incy(){
 };
 
 boolean UberdustGateway::checkReset(char * payload){
-  return strncmp(_reset_id,payload,_reset_id_count)==0;
+  return false;
+  //return strncmp(_reset_id,payload,_reset_id_count)==0;
 };
 
 boolean UberdustGateway::checkForMe(char * payload){
   //TODO :FIX
   return false;//strncmp(_uid,payload,_uid_count)==0;
 };
+
+
+
+
 
 
 

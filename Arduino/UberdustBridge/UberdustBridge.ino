@@ -7,8 +7,8 @@
 #define USE_TREE_ROUTING
 
 //The TestbedID to use for the connection
-#define TESTBED_ID 1
-#define CHANNEL 12
+#define TESTBED_ID "urn:wisebed:ctitestbed:"
+#define CHANNEL 13
 
 //Software Reset
 #include <avr/wdt.h>
@@ -71,6 +71,10 @@ byte uberdustServer[] =
 {
   150, 140, 5, 11
 };
+byte ip[] =
+{
+  150, 140, 5, 117
+};
 
 // global variables
 char address[20];
@@ -111,13 +115,13 @@ void check_heartbeat(char* topic, byte* payload, unsigned int length)
 
 void check_xbee(char* topic, byte* payload, unsigned int length)
 {
-  if (gateway.checkForMe((char*)payload)){
-    if (!check_device(*((uint16_t*)payload))) return;
+  //if (gateway.checkForMe((char*)payload)){
+    //if (!check_device(*((uint16_t*)payload))) return;
     digitalWrite(8,HIGH);
     delay(10);
     digitalWrite(8,LOW);
     radio->send( *((uint16_t*)payload) , &(payload[2]),length-2);
-  }  
+  //}  
 }
 
 /**
@@ -184,7 +188,7 @@ void setup()
 
   //xbee.initialize_xbee_module();
 
-  wdt_enable(WDTO_8S);
+  //wdt_enable(WDTO_8S);
   xbee.begin(38400);
   //wdt_reset();
   //wdt_disable();
@@ -219,7 +223,8 @@ void setup()
   wdt_reset();
   //radio = new TreeRouting(&xbee,true);
   //Connect to Network
-  if (Ethernet.begin(mac)==0){  
+  Ethernet.begin(mac,ip);
+  if (1==0){  
     //Software Reset
     ledState(2);
     watchdogReset();
@@ -233,7 +238,6 @@ void setup()
     gateway.setGatewayID(address);
     gateway.setTestbedID(TESTBED_ID);
     gateway.connect(callback);
-    gateway.pongServer();
   }
   wdt_reset();
   //Initialize variables
