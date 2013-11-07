@@ -10,6 +10,8 @@
 #define TESTBED_ID "urn:wisebed:ctitestbed:"
 #define CHANNEL 13
 
+#include "LedUtils.h"
+
 //Software Reset
 #include <avr/wdt.h>
 
@@ -166,7 +168,7 @@ void setup()
   xbee.init(CHANNEL);
   wdt_reset();
   wdt_disable();
-  
+
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
   radio = new TreeRouting(&xbee);
@@ -212,6 +214,7 @@ void setup()
 
   wdt_reset();
   wdt_disable();
+
   //Initialize variables
   lastReceivedStatus = false;
   lastReceived = millis();
@@ -257,22 +260,6 @@ void watchdogReset()
 }
 
 /**
- * Fancy reboot indicator
- */
-void bootblink()
-{
-  for (int i = 0; i < 4; i++)
-  {
-    digitalWrite(9, HIGH);
-    digitalWrite(8, LOW);
-    delay(300);
-    digitalWrite(9, LOW);
-    digitalWrite(8, HIGH);
-    delay(300);
-  }
-}
-
-/**
  * Software 2color led implementation
  */
 void ledState(int led1)
@@ -293,14 +280,4 @@ void ledState(int led1)
     digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
   }
 }
-
-void blinkFast(int pin){
-  digitalWrite(pin,HIGH);
-  delay(10);
-  digitalWrite(pin,LOW);
-}
-
-
-
-
 
