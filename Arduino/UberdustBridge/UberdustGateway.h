@@ -31,9 +31,6 @@ public:
 
   char * resetCode();
   
-  boolean checkReset(char * payload);
-  boolean checkForMe(char * payload);
-  
   void incx();
   void incy();
 
@@ -49,7 +46,6 @@ private:
   
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
-  //XBeeRadio * xbee;
   unsigned long xcounter,ycounter;
  
 

@@ -12,7 +12,6 @@
 
 //Software Reset
 #include <avr/wdt.h>
-//#include <String.h>
 
 //Ethernet Libraries
 #include <SPI.h>
@@ -22,7 +21,7 @@ EthernetClient ethernetClient ;
 //XBee Libraries
 #include <XBee.h>
 #include <XbeeRadio.h>
-//Create the XbeeRadio object we'll be using
+//Create the XbeeRadio object we'll be re-using
 XBeeRadio xbee;
 // create a reusable response object for responses we expect to handle
 XBeeRadioResponse response;
@@ -54,6 +53,11 @@ void add_device(uint16_t device){
     }
   }
 }
+
+/**
+ * Check if the device was registered via this Gateway.
+ * TODO: think if this is needed any more.
+ */
 boolean check_device(uint16_t device){
   for (int i=0;i<20;i++){
     if (devices[i]==device)return true;
@@ -71,17 +75,12 @@ byte uberdustServer[] =
 {
   150, 140, 5, 11
 };
-byte ip[] =
-{
-  150, 140, 5, 117
-};
 
 // global variables
 char address[20];
 bool receivedAny;
 int lastReceivedStatus;
 long lastReceived;
-//long lastCheck;
 
 /**
  * Callaback to the MQTT connection.
@@ -97,31 +96,28 @@ void callback(char* topic, byte* payload, unsigned int length)
 
 void check_heartbeat(char* topic, byte* payload, unsigned int length)
 {
-  //  lastCheck = millis();
   if (strcmp(topic, "heartbeat") == 0){
     if (strncmp((char *)payload, "reset",5)==0){
       //lastCheck = millis();
       wdt_reset();
-      digitalWrite(9,HIGH);
-      delay(10);
-      digitalWrite(9,LOW);
+      blinkFast(9);
     }
-    if (gateway.checkReset((char*)payload)){
-      watchdogReset();
-    }
+  }
+  else{
+    check_reset(topic,payload,length);
   }
 }
 
-
+void check_reset(char* topic, byte* payload, unsigned int length)
+{
+  if (strncmp((char*)payload,"reset",5)==0){
+    watchdogReset();
+  }
+}
 void check_xbee(char* topic, byte* payload, unsigned int length)
 {
-  //if (gateway.checkForMe((char*)payload)){
-    //if (!check_device(*((uint16_t*)payload))) return;
-    digitalWrite(8,HIGH);
-    delay(10);
-    digitalWrite(8,LOW);
-    radio->send( *((uint16_t*)payload) , &(payload[2]),length-2);
-  //}  
+  blinkFast(8);
+  radio->send( *((uint16_t*)payload) , &(payload[2]),length-2);
 }
 
 /**
@@ -133,29 +129,6 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
   sprintf(address, "%x", sender);
   gateway.publish(sender, payload, length);
 }
-
-/**
- * Software 2color led implementation
- */
-void ledState(int led1)
-{
-  if (led1 == 2)
-  {
-    digitalWrite(9, HIGH);
-    digitalWrite(8, HIGH);
-  }
-  else if (led1 == 1)
-  {
-    digitalWrite(9, HIGH);
-    digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
-  }
-  else if (led1 == 0)
-  {
-    digitalWrite(9, LOW);
-    digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
-  }
-}
-
 
 
 /**
@@ -186,16 +159,14 @@ void setup()
     devices[i]=0;
   }
 
-  //xbee.initialize_xbee_module();
-
-  //wdt_enable(WDTO_8S);
+  wdt_enable(WDTO_8S);
   xbee.begin(38400);
-  //wdt_reset();
-  //wdt_disable();
-  //Initialize our XBee module with the correct values using channel 12
-  //  xbee.init();
+  wdt_reset();
+  //Initialize our XBee module with the correct values using CHANNEL
   xbee.init(CHANNEL);
   wdt_reset();
+  wdt_disable();
+  
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
   radio = new TreeRouting(&xbee);
@@ -220,11 +191,10 @@ void setup()
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
   //memcpy(mac + 4, &my_address, 2);
-  wdt_reset();
   //radio = new TreeRouting(&xbee,true);
+  wdt_enable(WDTO_8S);
   //Connect to Network
-  Ethernet.begin(mac,ip);
-  if (1==0){  
+  if (Ethernet.begin(mac)==0){  
     //Software Reset
     ledState(2);
     watchdogReset();
@@ -239,9 +209,10 @@ void setup()
     gateway.setTestbedID(TESTBED_ID);
     gateway.connect(callback);
   }
+
   wdt_reset();
+  wdt_disable();
   //Initialize variables
-  //  lastCheck = millis();
   lastReceivedStatus = false;
   lastReceived = millis();
   receivedAny = false;
@@ -272,7 +243,9 @@ void loop()
   }
 }
 
+//TODO: What?
 #warning should use check not loop
+
 /**
  * Sofrware Reset using watchdogTimer
  */
@@ -298,5 +271,36 @@ void bootblink()
     delay(300);
   }
 }
+
+/**
+ * Software 2color led implementation
+ */
+void ledState(int led1)
+{
+  if (led1 == 2)
+  {
+    digitalWrite(9, HIGH);
+    digitalWrite(8, HIGH);
+  }
+  else if (led1 == 1)
+  {
+    digitalWrite(9, HIGH);
+    digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
+  }
+  else if (led1 == 0)
+  {
+    digitalWrite(9, LOW);
+    digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
+  }
+}
+
+void blinkFast(int pin){
+  digitalWrite(pin,HIGH);
+  delay(10);
+  digitalWrite(pin,LOW);
+}
+
+
+
 
 

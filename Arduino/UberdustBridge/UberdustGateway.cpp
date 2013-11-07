@@ -86,17 +86,6 @@ void UberdustGateway::incy(){
   ycounter++;
 };
 
-boolean UberdustGateway::checkReset(char * payload){
-  return false;
-  //return strncmp(_reset_id,payload,_reset_id_count)==0;
-};
-
-boolean UberdustGateway::checkForMe(char * payload){
-  //TODO :FIX
-  return false;//strncmp(_uid,payload,_uid_count)==0;
-};
-
-
 
 
 
