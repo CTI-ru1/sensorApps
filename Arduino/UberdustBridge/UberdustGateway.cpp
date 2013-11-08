@@ -69,23 +69,23 @@ void UberdustGateway::pongServer(){
     lastPong=millis();
   }
   {//sendConnect
-    char stats[50];
-    uint8_t len = sprintf(stats,"%s,%d,xbee,%ld",testbedID,gatewayID,xcounter);
-    mqttClient->publish("stats",(uint8_t*)stats,len);
-    xcounter=0;
-    len = sprintf(stats,"%s,%d,mqtt,%ld",testbedID,gatewayID,ycounter);
-    mqttClient->publish("stats",(uint8_t*)stats,len);
-    ycounter=0;
+//    char stats[50];
+//    uint8_t len = sprintf(stats,"%s,%d,xbee,%ld",testbedID,gatewayID,xcounter);
+//    mqttClient->publish("stats",(uint8_t*)stats,len);
+//    xcounter=0;
+//    len = sprintf(stats,"%s,%d,mqtt,%ld",testbedID,gatewayID,ycounter);
+//    mqttClient->publish("stats",(uint8_t*)stats,len);
+//    ycounter=0;
   }
 }
 
-void UberdustGateway::incx(){
-  xcounter++;
-};
-void UberdustGateway::incy(){
-  ycounter++;
-};
-
+//void UberdustGateway::incx(){
+//  xcounter++;
+//};
+//void UberdustGateway::incy(){
+//  ycounter++;
+//};
+//
 
 
 

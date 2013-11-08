@@ -12,9 +12,10 @@ class UberdustGateway {
 
 public:
   UberdustGateway(EthernetClient *ethernetClient):  
-  gatewayID(0),
-  xcounter(0),
-  ycounter(0){
+  gatewayID(0)
+//  ,xcounter(0)
+//  ,ycounter(0)
+  {
     this->ethernetClient =ethernetClient ; 
   };
 
@@ -29,10 +30,10 @@ public:
 
   void pongServer();
 
-  char * resetCode();
+  //char * resetCode();
   
-  void incx();
-  void incy();
+  //void incx();
+  //void incy();
 
 protected:
 
@@ -46,7 +47,7 @@ private:
   
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
-  unsigned long xcounter,ycounter;
+  //unsigned long xcounter,ycounter;
  
 
 };

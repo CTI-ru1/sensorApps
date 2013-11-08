@@ -5,6 +5,7 @@
  - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
  */
 #define USE_TREE_ROUTING
+#define USE_SD
 
 //The TestbedID to use for the connection
 #define TESTBED_ID "urn:wisebed:ctitestbed:"
@@ -33,6 +34,10 @@ Rx16Response rx;
 //MQTT Library
 #include <PubSubClient.h>
 
+#ifdef USE_SD
+#include <tinyFAT.h>
+#endif 
+
 //Message Routing
 #include <BaseRouting.h>
 #include <TreeRouting.h>
@@ -43,29 +48,29 @@ BaseRouting * radio;
 #include "UberdustGateway.h"
 UberdustGateway gateway(&ethernetClient);
 
-uint16_t devices[20];
-void add_device(uint16_t device){
-  for (int i=0;i<20;i++){
-    if (devices[i]==device)return;
-  }
-  for (int i=0;i<20;i++){
-    if (devices[i]==0){
-      devices[i]=device;
-      return;
-    }
-  }
-}
+//uint16_t devices[20];
+//void add_device(uint16_t device){
+//  for (int i=0;i<20;i++){
+//    if (devices[i]==device)return;
+//  }
+//  for (int i=0;i<20;i++){
+//    if (devices[i]==0){
+//      devices[i]=device;
+//      return;
+//    }
+//  }
+//}
 
 /**
  * Check if the device was registered via this Gateway.
  * TODO: think if this is needed any more.
  */
-boolean check_device(uint16_t device){
-  for (int i=0;i<20;i++){
-    if (devices[i]==device)return true;
-  }
-  return false;
-}
+//boolean check_device(uint16_t device){
+//  for (int i=0;i<20;i++){
+//    if (devices[i]==device)return true;
+//  }
+//  return false;
+//}
 
 // Update these with values suitable for your network/broker.
 byte mac[]    =
@@ -91,7 +96,7 @@ long lastReceived;
  */
 void callback(char* topic, byte* payload, unsigned int length)
 {
-  gateway.incy();
+  //gateway.incy();
   check_heartbeat(topic,payload,length);
   check_xbee(topic,payload,length);
 }
@@ -125,9 +130,9 @@ void check_xbee(char* topic, byte* payload, unsigned int length)
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
-  gateway.incx();
+  //gateway.incx();
   receivedAny = true;
-  add_device(sender);
+  //add_device(sender);
   sprintf(address, "%x", sender);
   gateway.publish(sender, payload, length);
 }
@@ -148,6 +153,19 @@ void setup()
   pinMode(7, OUTPUT);
   bootblink();
   ledState(2);
+
+  char testbedHash[50];
+
+#ifdef USE_SD
+  file.initFAT();
+  file.exists("sensorflare.txt");
+  file.openFile("sensorflare.txt");
+  file.readLn(testbedHash, 80);
+  file.closeFile();
+#else
+  strcpy(testbedHash,TESTBED_ID);
+#endif
+
   Serial.begin(38400);
   Serial.flush();
   Serial.end();
@@ -157,9 +175,9 @@ void setup()
   wdt_reset();
   wdt_disable();
 
-  for (int i=0;i<20;i++){
-    devices[i]=0;
-  }
+//  for (int i=0;i<20;i++){
+//    devices[i]=0;
+//  }
 
   wdt_enable(WDTO_8S);
   xbee.begin(38400);
@@ -208,8 +226,9 @@ void setup()
     ledState(0);
     gateway.setUberdustServer(uberdustServer);
     gateway.setGatewayID(address);
-    gateway.setTestbedID(TESTBED_ID);
+    gateway.setTestbedID(testbedHash);
     gateway.connect(callback);
+
   }
 
   wdt_reset();
@@ -280,4 +299,6 @@ void ledState(int led1)
     digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
   }
 }
+
+
 
