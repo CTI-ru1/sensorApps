@@ -13,8 +13,7 @@
 class TreeRouting : public BaseRouting {
 public:
 
-    TreeRouting(XBeeRadio * xbee)
-    :
+    TreeRouting(XBeeRadio * xbee):
     state_(TrUnconnected),
     lastBeacon(0),
     parent_(0),
@@ -35,7 +34,8 @@ public:
         return parent_;
     };
 
-    /** \brief Message IDs
+    /** 
+     * \brief Message IDs
      */
     enum TreeRoutingMsgIds {
         TrMsgIdBroadcast = 100, ///< Msg type for broadcasting tree state
