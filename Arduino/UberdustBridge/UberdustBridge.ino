@@ -5,10 +5,10 @@
  - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
  */
 #define USE_TREE_ROUTING
-#define USE_SD
+//#define USE_SD
 
 //The TestbedID to use for the connection
-#define TESTBED_ID "urn:wisebed:ctitestbed:"
+#define TESTBED_ID "urn:wctitestbed:"
 #define CHANNEL 13
 
 #include "LedUtils.h"
@@ -75,13 +75,14 @@ UberdustGateway gateway(&ethernetClient);
 // Update these with values suitable for your network/broker.
 byte mac[]    =
 {
-  0xAE, 0xED, 0xBA, 0xFE, 0xaa, 0xaa
+  0xAE, 0xED, 0xBA, 0xFd, 0xaa, 0xaa
 };
 
 byte uberdustServer[] =
 {
   150, 140, 5, 11
 };
+byte ip[]={150,140,5,117};
 
 // global variables
 char address[20];
@@ -96,7 +97,7 @@ long lastReceived;
  */
 void callback(char* topic, byte* payload, unsigned int length)
 {
-  //gateway.incy();
+  gateway.incy();
   check_heartbeat(topic,payload,length);
   check_xbee(topic,payload,length);
 }
@@ -130,7 +131,7 @@ void check_xbee(char* topic, byte* payload, unsigned int length)
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
-  //gateway.incx();
+  gateway.incx();
   receivedAny = true;
   //add_device(sender);
   sprintf(address, "%x", sender);
@@ -213,8 +214,10 @@ void setup()
   //memcpy(mac + 4, &my_address, 2);
   //radio = new TreeRouting(&xbee,true);
   wdt_enable(WDTO_8S);
+  Ethernet.begin(mac,ip);
   //Connect to Network
-  if (Ethernet.begin(mac)==0){  
+//  if (Ethernet.begin(mac)==0){  
+  if (1==0){      
     //Software Reset
     ledState(2);
     watchdogReset();
