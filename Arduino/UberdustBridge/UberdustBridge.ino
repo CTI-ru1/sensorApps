@@ -8,7 +8,7 @@
 //#define USE_SD
 
 //The TestbedID to use for the connection
-#define TESTBED_ID "urn:wctitestbed:"
+#define TESTBED_ID "ctitestbed\0"
 #define CHANNEL 13
 
 #include "LedUtils.h"
@@ -35,7 +35,9 @@ Rx16Response rx;
 #include <PubSubClient.h>
 
 #ifdef USE_SD
-#include <tinyFAT.h>
+#include <SdFat.h>
+const int chipSelect = 4;
+SdFat sd;
 #endif 
 
 //Message Routing
@@ -75,14 +77,15 @@ UberdustGateway gateway(&ethernetClient);
 // Update these with values suitable for your network/broker.
 byte mac[]    =
 {
-  0xAE, 0xED, 0xBA, 0xFd, 0xaa, 0xaa
+  0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xaa
 };
 
 byte uberdustServer[] =
 {
   150, 140, 5, 11
 };
-byte ip[]={150,140,5,117};
+byte ip[]={
+  150,140,5,117};
 
 // global variables
 char address[20];
@@ -97,7 +100,7 @@ long lastReceived;
  */
 void callback(char* topic, byte* payload, unsigned int length)
 {
-  gateway.incy();
+  //gateway.incy();
   check_heartbeat(topic,payload,length);
   check_xbee(topic,payload,length);
 }
@@ -131,13 +134,12 @@ void check_xbee(char* topic, byte* payload, unsigned int length)
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
-  gateway.incx();
+  //gateway.incx();
   receivedAny = true;
   //add_device(sender);
   sprintf(address, "%x", sender);
   gateway.publish(sender, payload, length);
 }
-
 
 /**
  * Initializes UberdustBridge.
@@ -157,28 +159,60 @@ void setup()
 
   char testbedHash[50];
 
+
 #ifdef USE_SD
-  file.initFAT();
-  file.exists("sensorflare.txt");
-  file.openFile("sensorflare.txt");
-  file.readLn(testbedHash, 80);
-  file.closeFile();
+  Serial.begin(38400);
+  Serial.println("SD Started");
+
+  if (!sd.begin(chipSelect, SPI_HALF_SPEED)) {
+    Serial.println("Could Not Read SD Card");
+    delay(2000);
+    watchdogReset();
+  }
+  ledState(1);
+  delay(2000);
+
+  int n;
+  SdFile rdfile("SENS.TXT", O_READ);
+  if (rdfile.isOpen()) {
+    char c;
+    int count=0;
+    do{
+      c = rdfile.read();
+      testbedHash[count++]=(char)c;
+    }  
+    while((c!=-1)&&(c!='\n'));
+    testbedHash[count-1]='\0';
+  }    
+  else {
+    // if the file didn't open, print an error:
+    Serial.println("Could Not Open File");
+    delay(2000);
+    watchdogReset();
+  }
+  Serial.end();
+  ledState(0);
+  delay(2000);
+  ledState(2);
+
 #else
-  strcpy(testbedHash,TESTBED_ID);
 #endif
 
-  Serial.begin(38400);
-  Serial.flush();
-  Serial.end();
+
+
+
+  //  Serial.begin(38400);
+  //  Serial.flush();
+  //  Serial.end();
 
   //Connect to XBee
   //wdt_enable(WDTO_8S);
   wdt_reset();
   wdt_disable();
 
-//  for (int i=0;i<20;i++){
-//    devices[i]=0;
-//  }
+  //  for (int i=0;i<20;i++){
+  //    devices[i]=0;
+  //  }
 
   wdt_enable(WDTO_8S);
   xbee.begin(38400);
@@ -216,7 +250,7 @@ void setup()
   wdt_enable(WDTO_8S);
   Ethernet.begin(mac,ip);
   //Connect to Network
-//  if (Ethernet.begin(mac)==0){  
+  //  if (Ethernet.begin(mac)==0){  
   if (1==0){      
     //Software Reset
     ledState(2);
@@ -229,7 +263,11 @@ void setup()
     ledState(0);
     gateway.setUberdustServer(uberdustServer);
     gateway.setGatewayID(address);
+    #ifdef USE_SD
     gateway.setTestbedID(testbedHash);
+    #else
+    gateway.setTestbedID(TESTBED_ID);
+    #endif
     gateway.connect(callback);
 
   }
@@ -269,7 +307,7 @@ void loop()
 }
 
 //TODO: What?
-#warning should use check not loop
+//#warning should use check not loop
 
 /**
  * Sofrware Reset using watchdogTimer
@@ -302,6 +340,18 @@ void ledState(int led1)
     digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
