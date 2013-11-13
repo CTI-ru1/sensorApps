@@ -75,12 +75,12 @@ void UberdustGateway::pongServer(){
   }
 }
 
-void UberdustGateway::incx(){
-  xcounter++;
-};
-void UberdustGateway::incy(){
-  ycounter++;
-};
+//void UberdustGateway::incx(){
+//  xcounter++;
+//};
+//void UberdustGateway::incy(){
+//  ycounter++;
+//};
 
 
 

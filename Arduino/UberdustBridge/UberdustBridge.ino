@@ -5,7 +5,7 @@
  - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
  */
 #define USE_TREE_ROUTING
-//#define USE_SD
+#define USE_SD
 
 //The TestbedID to use for the connection
 #define TESTBED_ID "ctitestbed\0"
@@ -85,10 +85,10 @@ byte uberdustServer[] =
   150, 140, 5, 11
 };
 byte ip[]={
-  150,140,5,117};
+  150,140,5,118};
 
 // global variables
-char address[20];
+char address[5];
 bool receivedAny;
 int lastReceivedStatus;
 long lastReceived;
