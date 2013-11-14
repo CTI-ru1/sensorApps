@@ -17,7 +17,7 @@ public:
     this->status = 0;
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
-    this->set_notify_time(300);
+    this->set_notify_time(30);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
