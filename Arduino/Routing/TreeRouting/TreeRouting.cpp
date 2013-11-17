@@ -34,11 +34,7 @@ void TreeRouting::loop() {
 }
 
 void TreeRouting::add_child(uint16_t child) {
-    for (int i = 0; i < MAX_CHILDREN; i++) {
-        if (children[i] == child) {
-            return;
-        }
-    }
+    if ( is_known(child) ) return;
     for (int i = 0; i < MAX_CHILDREN; i++) {
         if (children[i] == 0xffff) {
             children[i] = child;
