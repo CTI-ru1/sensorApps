@@ -1,12 +1,12 @@
-### Arduino Routing 
+## Arduino Routing 
 
 Interface used to provide a routing layer for Arduino + XBee 802.15.4 Communication.
 
-#### NONRouting
+### NonRouting
 
 Provides a simple wrapper to the XbeeRadio. No routing is provided.
 
-#### TREERouting
+### TreeRouting
 
 Two modes are availble for each device: `Node` and `Sink`.
 
