@@ -10,3 +10,4 @@
 #include "TemperatureSensor.h"
 #include "ZoneSensor.h"
 #include "UltrasonicSensor.h"
+#include "RandomSensor.h"
