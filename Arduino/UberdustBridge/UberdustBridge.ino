@@ -5,10 +5,10 @@
  - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
  */
 #define USE_TREE_ROUTING
-#define USE_SD
+//#define USE_SD
 
 //The TestbedID to use for the connection
-#define TESTBED_ID "ctitestbed\0"
+#define TESTBED_ID "urn:ctitestbed:"
 #define CHANNEL 13
 
 #include "LedUtils.h"
@@ -84,8 +84,8 @@ byte uberdustServer[] =
 {
   150, 140, 5, 11
 };
-byte ip[]={
-  150,140,5,118};
+//byte ip[]={
+//  150,140,5,118};
 
 // global variables
 char address[5];
@@ -111,7 +111,7 @@ void check_heartbeat(char* topic, byte* payload, unsigned int length)
     if (strncmp((char *)payload, "reset",5)==0){
       //lastCheck = millis();
       wdt_reset();
-      blinkFast(9);
+      blinkFast(6);
     }
   }
   else{
@@ -127,7 +127,7 @@ void check_reset(char* topic, byte* payload, unsigned int length)
 }
 void check_xbee(char* topic, byte* payload, unsigned int length)
 {
-  blinkFast(8);
+  blinkFast(2);
   radio->send( *((uint16_t*)payload) , &(payload[2]),length-2);
 }
 
@@ -151,9 +151,9 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
  */
 void setup()
 {
-  pinMode(9, OUTPUT);
-  pinMode(8, OUTPUT);
-  pinMode(7, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(2, OUTPUT);
   bootblink();
   ledState(2);
 
@@ -248,10 +248,11 @@ void setup()
   //memcpy(mac + 4, &my_address, 2);
   //radio = new TreeRouting(&xbee,true);
   wdt_enable(WDTO_8S);
-  Ethernet.begin(mac,ip);
+  wdt_disable();
+  //Ethernet.begin(mac,ip);
   //Connect to Network
-  //  if (Ethernet.begin(mac)==0){  
-  if (1==0){      
+  if (Ethernet.begin(mac)==0){  
+  //if ( 1==0 ){      
     //Software Reset
     ledState(2);
     watchdogReset();
@@ -326,18 +327,18 @@ void ledState(int led1)
 {
   if (led1 == 2)
   {
-    digitalWrite(9, HIGH);
-    digitalWrite(8, HIGH);
+    digitalWrite(6, HIGH);
+    digitalWrite(2, HIGH);
   }
   else if (led1 == 1)
   {
-    digitalWrite(9, HIGH);
-    digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
+    digitalWrite(6, HIGH);
+    digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
   }
   else if (led1 == 0)
   {
-    digitalWrite(9, LOW);
-    digitalWrite(8, lastReceivedStatus ? HIGH : LOW);
+    digitalWrite(6, LOW);
+    digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
   }
 }
 

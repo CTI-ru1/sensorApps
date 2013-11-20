@@ -7,11 +7,11 @@ void bootblink()
 {
   for (int i = 0; i < 4; i++)
   {
-    digitalWrite(9, HIGH);
-    digitalWrite(8, LOW);
+    digitalWrite(6, HIGH);
+    digitalWrite(2, LOW);
     delay(300);
-    digitalWrite(9, LOW);
-    digitalWrite(8, HIGH);
+    digitalWrite(6, LOW);
+    digitalWrite(2, HIGH);
     delay(300);
   }
 }
