@@ -2,7 +2,7 @@
 #define CURRENT_SENSOR
 
 #include <CoapSensor.h>
-#include "EmonLib.h"                   // Include Emon Library
+#include <EmonLib.h>                   // Include Emon Library
 
 class CurrentSensor: 
 public CoapSensor 

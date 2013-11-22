@@ -25,8 +25,7 @@
 //Include CoAP Libraries
 #include <coap.h>
 #include <UberdustSensors.h>
-#include "WattHourSensor.h"
-#include "CurrentSensor.h"
+
 
 #include "EmonLib.h"  
 //Create the XbeeRadio object we'll be using
@@ -38,23 +37,24 @@ Coap coap;
 
 //Message Routing
 BaseRouting * routing;
-long blinkTime;
+
 //parentSensor* parent;
 
-unsigned long lastBlink;
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
-
+  blinkFast(9);
   coap.receiver(payload, sender, length);
 }
 
 //Runs only once
 void setup() {
-  wdt_disable();
   pinMode(9,OUTPUT);
+  pinMode(8,OUTPUT);
+
+  bootblink(9,8);
+  wdt_disable();
   digitalWrite(9,HIGH);
-  blinkTime=millis();
 
   //Connect to XBee
   //xbee.initialize_xbee_module();
@@ -86,27 +86,21 @@ void setup() {
   add_sensors();
 
   wdt_disable();
-  pinMode(9,OUTPUT);
   wdt_enable(WDTO_8S);
-  
-  lastBlink=millis();
 }
 
 void loop() {
+  static unsigned long observersTimestamp = 0;
   //run the handler on each loop to respond to incoming requests
   coap.handler();
-
   routing->loop();
   wdt_reset();
+  
 
-if (millis()-  lastBlink>1000){
-  digitalWrite(9,HIGH);
-  delay(10);
-  digitalWrite(9,LOW);
-  delay(10);
-  lastBlink=millis();
-}
-
+  if (millis()-observersTimestamp>5000&&coap.coap_has_observers()){
+    blinkFast(8);
+    observersTimestamp=millis();
+  }
 }
 
 
@@ -115,9 +109,9 @@ void add_sensors() {
   monitor->current(A1, 30);      // Current: input pin, calibration.
   //NonInvasiveSensor* NonInvasive = new NonInvasiveSensor("1S",A1);
   //coap.add_resource(NonInvasive);  
-  CurrentSensor * current = new CurrentSensor("1s",monitor);
+  CurrentSensor * current = new CurrentSensor("curr:1",monitor);
   coap.add_resource(current);  
-  WattHourSensor * cons = new WattHourSensor("1c",30,current);
+  WattHourSensor * cons = new WattHourSensor("cons:1",30,current);
   coap.add_resource(cons);  
   parentSensor * par = new parentSensor("r",routing);
   coap.add_resource(par);  
@@ -127,4 +121,5 @@ void add_sensors() {
 
 
 
-  
+
+
