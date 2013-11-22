@@ -14,3 +14,7 @@
 #include "CurrentSensor.h"
 #include "WattHourSensor.h"
 #include "LedUtils.h"
+
+#include "InvertedZoneSensor.h"
+
+

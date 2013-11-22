@@ -39,7 +39,10 @@ Coap coap;
 BaseRouting * routing;
 
 //parentSensor* parent;
-
+//For make blink the led without delay(coiap can not acept a delay of 1 second)
+int ledState = LOW;             
+long previousMillis = millis();  
+long interval = 1000;
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
@@ -48,6 +51,12 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
 
 //Runs only once
 void setup() {
+  //Indicate
+  pinMode(10,OUTPUT);//on red
+  pinMode(11,OUTPUT);//on green
+  //We put constantly red in the indicate until be ready the set up, to be sure that the hardware work
+  digitalWrite(10,HIGH);
+  digitalWrite(11,LOW);
 
   wdt_disable();
 
@@ -90,8 +99,27 @@ void loop() {
   routing->loop();
   wdt_reset();
 
-  if (millis()-observersTimestamp>5000&&coap.coap_has_observers()){
-    observersTimestamp=millis();
+    if(millis() - previousMillis > interval) {
+    // save the last time you blinked the LED 
+    previousMillis = millis();   
+    if(coap.coap_has_observers()==0){
+
+
+      // if the LED is off turn it on and vice-versa:
+      if (ledState == LOW)
+        ledState = HIGH;
+      else
+        ledState = LOW;
+
+      // set the LED with the ledState of the variable:
+      digitalWrite(10, ledState);
+      digitalWrite(11,LOW);
+    }
+
+    else{
+      digitalWrite(10,LOW);
+      digitalWrite(11,HIGH);
+    }
   }
 }
 

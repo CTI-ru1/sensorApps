@@ -1,16 +1,16 @@
 #include <CoapSensor.h>
 
-class zoneSensor : 
+class InvertedZoneSensor : 
 public CoapSensor 
 {
 public:
   int pin, status;
-  zoneSensor(): 
+  InvertedZoneSensor(): 
   CoapSensor()
   {
   }
 
-  zoneSensor(char * name, int pin): 
+  InvertedZoneSensor(char * name, int pin): 
   CoapSensor(name)
   {
     this->pin = pin;
@@ -21,7 +21,7 @@ public:
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
-    this->status = digitalRead(this->pin);
+    this->status = (1-digitalRead(this->pin));
     *output_data_len = sprintf((char *)output_data,"%d",this->status);
   }
   void set_value(uint8_t* input_data, size_t input_data_len, uint8_t* output_data, size_t* output_data_len)

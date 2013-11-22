@@ -84,25 +84,25 @@ void setup() {
 {
     char name [4];
     sprintf(name,"lz%d",1);
-    zoneSensor * lzSensor  = new zoneSensor(name, 2);
+   InvertedZoneSensor * lzSensor  = new InvertedZoneSensor(name, 2);
     coap.add_resource(lzSensor);
 }
 {
     char name [4];
     sprintf(name,"lz%d",2);
-    zoneSensor * lzSensor  = new zoneSensor(name, 3);
+   InvertedZoneSensor * lzSensor  = new InvertedZoneSensor(name, 3);
     coap.add_resource(lzSensor);
 }
 {
     char name [4];
     sprintf(name,"lz%d",3);
-    zoneSensor * lzSensor  = new zoneSensor(name, 4);
+   InvertedZoneSensor * lzSensor  = new InvertedZoneSensor(name, 4);
     coap.add_resource(lzSensor);
 }
 {
     char name [4];
     sprintf(name,"lz%d",4);
-    zoneSensor * lzSensor  = new zoneSensor(name, 5);
+   InvertedZoneSensor * lzSensor  = new InvertedZoneSensor(name, 5);
     coap.add_resource(lzSensor);
 }
 

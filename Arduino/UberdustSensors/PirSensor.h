@@ -10,7 +10,7 @@ public:
   {
     this->pin = pin;
     this->status = LOW;
-    digitalWrite(pin, HIGH);
+    pinMode(pin, INPUT);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -30,5 +30,6 @@ public:
       }
       timestamp = millis();
     }
-  }
+    this->status=digitalRead(this->pin);
+}
 };
