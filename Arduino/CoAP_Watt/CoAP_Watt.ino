@@ -43,18 +43,13 @@ BaseRouting * routing;
 /**
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
-  blinkFast(9);
   coap.receiver(payload, sender, length);
 }
 
 //Runs only once
 void setup() {
-  pinMode(9,OUTPUT);
-  pinMode(8,OUTPUT);
 
-  bootblink(9,8);
   wdt_disable();
-  digitalWrite(9,HIGH);
 
   //Connect to XBee
   //xbee.initialize_xbee_module();
@@ -69,7 +64,6 @@ void setup() {
   routing = new NonRouting(&xbee);
 #endif 
   routing->set_sink(false);
-  digitalWrite(9,LOW);
 
   uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
   uint8_t * bit = ((uint8_t*) & address);
@@ -95,10 +89,8 @@ void loop() {
   coap.handler();
   routing->loop();
   wdt_reset();
-  
 
   if (millis()-observersTimestamp>5000&&coap.coap_has_observers()){
-    blinkFast(8);
     observersTimestamp=millis();
   }
 }
@@ -115,7 +107,6 @@ void add_sensors() {
   coap.add_resource(cons);  
   parentSensor * par = new parentSensor("r",routing);
   coap.add_resource(par);  
-
 }
 
 
