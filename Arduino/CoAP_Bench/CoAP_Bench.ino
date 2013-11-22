@@ -42,8 +42,8 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
 //Runs only once
 void setup() {
   wdt_disable();
-  pinMode(13,OUTPUT);
-  digitalWrite(13,HIGH);
+  pinMode(9,OUTPUT);
+  digitalWrite(9,HIGH);
   blinkTime=millis();
 
   //Connect to XBee
@@ -59,7 +59,7 @@ void setup() {
   routing = new NonRouting(&xbee);
 #endif 
   routing->set_sink(false);
-  digitalWrite(13,LOW);
+  digitalWrite(9,LOW);
 
   uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
   uint8_t * bit = ((uint8_t*) & address);
