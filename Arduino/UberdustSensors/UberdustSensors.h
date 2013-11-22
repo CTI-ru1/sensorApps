@@ -12,3 +12,4 @@
 #include "RandomSensor.h"
 #include "UltrasonicSensor.h"
 #include "CurrentSensor.h"
+#include "WattHourSensor.h"
