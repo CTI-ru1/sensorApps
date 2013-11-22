@@ -9,5 +9,6 @@
 #include "SwitchSensor.h"
 #include "TemperatureSensor.h"
 #include "ZoneSensor.h"
-#include "UltrasonicSensor.h"
 #include "RandomSensor.h"
+#include "UltrasonicSensor.h"
+#include "CurrentSensor.h"
