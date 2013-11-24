@@ -15,8 +15,10 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
   char receive_bus[50];
   sprintf(receive_bus,"s%s",testbedID);
 
+  char deviceID [50];
+  sprintf(deviceID,"%s%d",testbedID,rand());
 
-  if (mqttClient->connect(_message_bus)) {
+  if (mqttClient->connect(deviceID)) {
 
     //subscribe to heartbeats
     mqttClient->subscribe("heartbeat");
