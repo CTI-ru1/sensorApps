@@ -16,15 +16,24 @@ void bootblink()
   }
 }
 
+/**
+ * Fast Blink operation. (The led has to be already set to OUTPUT)
+ * @param pin the pin to blink
+ */
 void blinkFast(int pin){
   digitalWrite(pin,HIGH);
   delay(10);
   digitalWrite(pin,LOW);
 }
 
+/**
+ * Slow Blink operation. (The led has to be already set to OUTPUT)
+ * @param pin the pin to blink
+ */
 void blinkSlow(int pin){
   digitalWrite(pin,HIGH);
   delay(300);
   digitalWrite(pin,LOW);
 }
+
 

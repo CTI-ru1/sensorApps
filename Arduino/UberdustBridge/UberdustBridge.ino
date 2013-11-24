@@ -1,25 +1,20 @@
-/*
-  UberdustBridge
- - connects to an MQTT server
- - publishes coap messages to the topic "testbed#"
- - subscribes to the topic "heartbeat" to receive keep-alive messages from the server
+/**
+ * UberdustBridge
+ * - connects to an MQTT server
+ * - publishes coap messages to the topics "connect/#", "xbeeaddress/#" and "stats/#"
+ * - subscribes to the topic "heartbeat/#" to receive keep-alive messages from the server
+ * @author Dimitrios Amaxilatis
  */
+
+//Operational Parameters
 #define USE_TREE_ROUTING
-//#define USE_SD
+#define CHANNEL 12
 
-//The TestbedID to use for the connection
-#define TESTBED_ID "urn:ctitestbed:"
-#define CHANNEL 13
-
+//Leds
 #include "LedUtils.h"
 
-//Software Reset
+//Software Reset, Remote Reset
 #include <avr/wdt.h>
-
-//Ethernet Libraries
-#include <SPI.h>
-#include <Ethernet.h>
-EthernetClient ethernetClient ;
 
 //XBee Libraries
 #include <XBee.h>
@@ -31,85 +26,63 @@ XBeeRadioResponse response;
 //Reusable response
 Rx16Response rx;
 
-//MQTT Library
-#include <PubSubClient.h>
-
-#ifdef USE_SD
-#include <SdFat.h>
-const int chipSelect = 4;
-SdFat sd;
-#endif 
-
 //Message Routing
 #include <BaseRouting.h>
 #include <TreeRouting.h>
 #include <NonRouting.h>
 BaseRouting * radio;
 
+//Ethernet
+#include <SPI.h>
+#include <Ethernet.h>
+EthernetClient ethernetClient ;
+
+//MQTT Library
+#include <PubSubClient.h>
+
 //Helper Class
 #include "UberdustGateway.h"
 UberdustGateway gateway(&ethernetClient);
 
-//uint16_t devices[20];
-//void add_device(uint16_t device){
-//  for (int i=0;i<20;i++){
-//    if (devices[i]==device)return;
-//  }
-//  for (int i=0;i<20;i++){
-//    if (devices[i]==0){
-//      devices[i]=device;
-//      return;
-//    }
-//  }
-//}
+//Update these with values suitable for your network/broker.
+byte mac[] = {  
+  0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xaa};
 
-/**
- * Check if the device was registered via this Gateway.
- * TODO: think if this is needed any more.
- */
-//boolean check_device(uint16_t device){
-//  for (int i=0;i<20;i++){
-//    if (devices[i]==device)return true;
-//  }
-//  return false;
-//}
+byte uberdustServer[] ={  
+  150, 140, 5, 11};
 
-// Update these with values suitable for your network/broker.
-byte mac[]    =
-{
-  0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xaa
-};
-
-byte uberdustServer[] =
-{
-  150, 140, 5, 11
-};
-//byte ip[]={
-//  150,140,5,118};
-
-// global variables
+// Address of the XBee
 char address[5];
+// Indicator of XBee communication
 bool receivedAny;
+// Indicator of MQTT communication
 int lastReceivedStatus;
-long lastReceived;
+// Timestamp of the last MQTT message received
+unsigned long lastReceived;
 
 /**
  * Callaback to the MQTT connection.
- * Topic: heartbeat - used to keep-alive the connection to the server
- * Topic: arduinoGateway - used to receive commands from the uberdust server
+ * @param topic the topic the message was published on
+ * @param payload the message published
+ * @param length the size of the message
  */
 void callback(char* topic, byte* payload, unsigned int length)
 {
-  //gateway.incy();
+  gateway.incy();
   check_heartbeat(topic,payload,length);
   check_xbee(topic,payload,length);
 }
 
+/**
+ * Check incoming MQTT message for the heartbeat and reset message.
+ * @param topic the topic the message was published on
+ * @param payload the message published
+ * @param length the size of the message
+ */
 void check_heartbeat(char* topic, byte* payload, unsigned int length)
 {
   if (strcmp(topic, "heartbeat") == 0){
     if (strncmp((char *)payload, "reset",5)==0){
-      //lastCheck = millis();
       wdt_reset();
       blinkFast(6);
     }
@@ -119,12 +92,25 @@ void check_heartbeat(char* topic, byte* payload, unsigned int length)
   }
 }
 
+/**
+ * Check incoming MQTT message for the reset message.
+ * @param topic the topic the message was published on
+ * @param payload the message published
+ * @param length the size of the message
+ */
 void check_reset(char* topic, byte* payload, unsigned int length)
 {
   if (strncmp((char*)payload,"reset",5)==0){
     watchdogReset();
   }
 }
+
+/**
+ * Check incoming MQTT message for xbee messages.
+ * @param topic the topic the message was published on
+ * @param payload the message published
+ * @param length the size of the message
+ */
 void check_xbee(char* topic, byte* payload, unsigned int length)
 {
   blinkFast(2);
@@ -132,9 +118,13 @@ void check_xbee(char* topic, byte* payload, unsigned int length)
 }
 
 /**
+ * Callaback to the XBee radio.
+ * @param sender origin device of the message
+ * @param payload the bytes of the message received
+ * @param length the size of the payload
  */
 void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
-  //gateway.incx();
+  gateway.incx();
   receivedAny = true;
   //add_device(sender);
   sprintf(address, "%x", sender);
@@ -157,71 +147,25 @@ void setup()
   bootblink();
   ledState(2);
 
-  char testbedHash[50];
-
-
-#ifdef USE_SD
+  //Flush serial to cleanup xbee connection
   Serial.begin(38400);
-  Serial.println("SD Started");
-
-  if (!sd.begin(chipSelect, SPI_HALF_SPEED)) {
-    Serial.println("Could Not Read SD Card");
-    delay(2000);
-    watchdogReset();
-  }
-  ledState(1);
-  delay(2000);
-
-  int n;
-  SdFile rdfile("SENS.TXT", O_READ);
-  if (rdfile.isOpen()) {
-    char c;
-    int count=0;
-    do{
-      c = rdfile.read();
-      testbedHash[count++]=(char)c;
-    }  
-    while((c!=-1)&&(c!='\n'));
-    testbedHash[count-1]='\0';
-  }    
-  else {
-    // if the file didn't open, print an error:
-    Serial.println("Could Not Open File");
-    delay(2000);
-    watchdogReset();
-  }
+  Serial.flush();
   Serial.end();
-  ledState(0);
-  delay(2000);
-  ledState(2);
 
-#else
-#endif
-
-
-
-
-  //  Serial.begin(38400);
-  //  Serial.flush();
-  //  Serial.end();
-
-  //Connect to XBee
-  //wdt_enable(WDTO_8S);
+  //Auto-reset if something goes bad
   wdt_reset();
   wdt_disable();
-
-  //  for (int i=0;i<20;i++){
-  //    devices[i]=0;
-  //  }
-
   wdt_enable(WDTO_8S);
+
+  //Connect to XBee
   xbee.begin(38400);
   wdt_reset();
   //Initialize our XBee module with the correct values using CHANNEL
   xbee.init(CHANNEL);
   wdt_reset();
-  wdt_disable();
+  ledState(1);
 
+  //Setup radio using the xbee
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
   radio = new TreeRouting(&xbee);
@@ -229,6 +173,7 @@ void setup()
   radio = new NonRouting(&xbee);
 #endif 
   radio->set_sink(true);
+  wdt_reset();
 
   uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
   uint8_t * bit = ((uint8_t*) & address);
@@ -238,21 +183,21 @@ void setup()
   bit[1] = lbyte;
   radio->set_my_address(address);
   radio->set_message_received_callback(radio_callback);
+  wdt_reset();
 
-  ledState(1);
 
   //Generate Unique mac based on xbee address
   uint16_t my_address = address;
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
-  //memcpy(mac + 4, &my_address, 2);
-  //radio = new TreeRouting(&xbee,true);
+
+
   wdt_enable(WDTO_8S);
-  wdt_disable();
+  wdt_reset();
   //Ethernet.begin(mac,ip);
   //Connect to Network
   if (Ethernet.begin(mac)==0){  
-  //if ( 1==0 ){      
+    //if ( 1==0 ){      
     //Software Reset
     ledState(2);
     watchdogReset();
@@ -263,12 +208,25 @@ void setup()
     //Connect to MQTT broker
     ledState(0);
     gateway.setUberdustServer(uberdustServer);
-    gateway.setGatewayID(address);
-    #ifdef USE_SD
+
+    //create the unique id based on the xbee mac address
+    char testbedHash[17];
+
+    uint32_t addr64h = xbee.getMyAddress64High();
+    uint32_t addr64l = xbee.getMyAddress64Low();
+
+    uint16_t * addr64hp =  ( uint16_t * ) &addr64h;
+    uint16_t * addr64lp =  ( uint16_t * ) &addr64l;
+
+    sprintf(testbedHash, "%4x%4x%4x%4x",addr64hp[0],addr64hp[1],addr64lp[0],addr64lp[1]);
+
+    for (int i=0;i<64;i++){
+      if (testbedHash[i]==' '){
+        testbedHash[i]='0';
+      }
+    }
+
     gateway.setTestbedID(testbedHash);
-    #else
-    gateway.setTestbedID(TESTBED_ID);
-    #endif
     gateway.connect(callback);
 
   }
@@ -307,9 +265,6 @@ void loop()
   }
 }
 
-//TODO: What?
-//#warning should use check not loop
-
 /**
  * Sofrware Reset using watchdogTimer
  */
@@ -322,25 +277,35 @@ void watchdogReset()
 
 /**
  * Software 2color led implementation
+ * @param theStatus the status to report
  */
-void ledState(int led1)
+void ledState(int theStatus)
 {
-  if (led1 == 2)
+  if (theStatus == 2)
   {
     digitalWrite(6, HIGH);
     digitalWrite(2, HIGH);
   }
-  else if (led1 == 1)
+  else if (theStatus == 1)
   {
     digitalWrite(6, HIGH);
     digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
   }
-  else if (led1 == 0)
+  else if (theStatus == 0)
   {
     digitalWrite(6, LOW);
     digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -11,17 +11,14 @@
 class UberdustGateway {
 
 public:
-  UberdustGateway(EthernetClient *ethernetClient):  
-  gatewayID(0)
-//    ,xcounter(0)
-//      ,ycounter(0)
-      {
-        this->ethernetClient =ethernetClient ; 
-      };
+  UberdustGateway(EthernetClient *ethernetClient):    
+  xcounter(0),ycounter(0)
+  {
+    this->ethernetClient =ethernetClient ; 
+  };
 
   void setTestbedID(char* testbedID);
   void setUberdustServer(byte * uberdustServer);
-  void setGatewayID(uint16_t gatewayID);
   void connect( void callback(char*, uint8_t*, unsigned int));
   void loop();
 
@@ -32,14 +29,13 @@ public:
 
   //char * resetCode();
 
-//  void incx();
-//  void incy();
+  void incx();
+  void incy();
 
 protected:
 
 private:
-  char* testbedID;
-  uint16_t gatewayID;  
+  char testbedID[17];
   long lastPong;
   byte * uberdustServer;
   char _message_bus[50];
@@ -49,8 +45,12 @@ private:
 
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
-  //unsigned long xcounter,ycounter;
+  unsigned long xcounter,ycounter;
 
 
 };
+
+
+
+
 

@@ -1,22 +1,19 @@
 #include "UberdustGateway.h"
 
 void UberdustGateway::setTestbedID(char* testbedID){
-  this->testbedID=testbedID;
+  strcpy(this->testbedID,testbedID);
 }
 void UberdustGateway::setUberdustServer(byte * uberdustServer){
   this->uberdustServer = uberdustServer;  
-}
-void UberdustGateway::setGatewayID(uint16_t gatewayID){
-  this->gatewayID = gatewayID;  
 }
 
 void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
   mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
 
-  _message_bus_count= sprintf(_message_bus,"%s-%d",testbedID,gatewayID);
+  _message_bus_count= sprintf(_message_bus,"%s",testbedID);
 
   char receive_bus[50];
-  sprintf(receive_bus,"s%s-%d",testbedID,gatewayID);
+  sprintf(receive_bus,"s%s",testbedID);
 
 
   if (mqttClient->connect(_message_bus)) {
@@ -26,7 +23,7 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
     //subscribe to messages
     mqttClient->subscribe(receive_bus);
 
-    _connect_count = sprintf(firstConnect,"1-%s-%d",testbedID,gatewayID);
+    _connect_count = sprintf(firstConnect,"1-%s",testbedID);
     mqttClient->publish("connect",(uint8_t*)firstConnect,_connect_count);
     firstConnect[0]='0';
     lastPong=millis();
@@ -64,23 +61,23 @@ void UberdustGateway::pongServer(){
   mqttClient->publish("connect",(uint8_t*)firstConnect,_connect_count);
   lastPong=millis();
 
-  {//sendConnect
-    //    char stats[50];
-    //    uint8_t len = sprintf(stats,"%s,%d,xbee,%ld",testbedID,gatewayID,xcounter);
-    //    mqttClient->publish("stats",(uint8_t*)stats,len);
-    //    xcounter=0;
-    //    len = sprintf(stats,"%s,%d,mqtt,%ld",testbedID,gatewayID,ycounter);
-    //    mqttClient->publish("stats",(uint8_t*)stats,len);
-    //    ycounter=0;
+  {
+        char stats[50];
+        uint8_t len = sprintf(stats,"%s-xbee-%ld",testbedID,xcounter);
+        mqttClient->publish("stats",(uint8_t*)stats,len);
+        xcounter=0;
+        len = sprintf(stats,"%s-mqtt-%ld",testbedID,ycounter);
+        mqttClient->publish("stats",(uint8_t*)stats,len);
+        ycounter=0;
   }
 }
 
-//void UberdustGateway::incx(){
-//  xcounter++;
-//};
-//void UberdustGateway::incy(){
-//  ycounter++;
-//};
+void UberdustGateway::incx(){
+  xcounter++;
+};
+void UberdustGateway::incy(){
+  ycounter++;
+};
 
 
 
