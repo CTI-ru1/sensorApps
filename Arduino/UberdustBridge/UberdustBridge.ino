@@ -49,7 +49,7 @@ byte mac[] = {
   0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xaa};
 
 byte uberdustServer[] ={  
-  150, 140, 5, 11};
+  150, 140, 5, 20};
 
 // Address of the XBee
 char address[5];
@@ -142,7 +142,6 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
 void setup()
 {
   pinMode(6, OUTPUT);
-  pinMode(5, OUTPUT);
   pinMode(2, OUTPUT);
   bootblink();
   ledState(2);
