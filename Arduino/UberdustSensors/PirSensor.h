@@ -11,6 +11,8 @@ public:
     this->pin = pin;
     this->status = LOW;
     pinMode(pin, INPUT);
+    this->set_notify_time(30);
+
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -22,14 +24,13 @@ public:
     static unsigned long timestamp = 0;
     if(millis() - timestamp > 1000)
     {
+      timestamp = millis();
       int newStatus = !digitalRead(this->pin); // read the value from the sensor
       if(newStatus != this->status)
       {
-        this->changed = true;
         this->status = newStatus;
+	this->changed = true;
       }
-      timestamp = millis();
     }
-    this->status=digitalRead(this->pin);
 }
 };
