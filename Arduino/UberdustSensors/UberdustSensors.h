@@ -14,6 +14,8 @@
 #include "CurrentSensor.h"
 #include "WattHourSensor.h"
 #include "LedUtils.h"
+#include "MicrophoneSensor.h"
+#include "HumiditySensor.h"
 
 #include "InvertedZoneSensor.h"
 
