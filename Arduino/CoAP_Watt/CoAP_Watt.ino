@@ -20,17 +20,15 @@
 #include <BaseRouting.h>
 #include <TreeRouting.h>
 #include <NonRouting.h>
+#include "EmonLib.h"  
 //Software Reset
 #include <avr/wdt.h>
 //Include CoAP Libraries
 #include <coap.h>
 #include <UberdustSensors.h>
 
-
-#include "EmonLib.h"  
 //Create the XbeeRadio object we'll be using
 XBeeRadio xbee = XBeeRadio();
-
 
 //CoAP object
 Coap coap;
@@ -129,9 +127,9 @@ void add_sensors() {
   monitor->current(A1, 30);      // Current: input pin, calibration.
   //NonInvasiveSensor* NonInvasive = new NonInvasiveSensor("1S",A1);
   //coap.add_resource(NonInvasive);  
-  CurrentSensor * current = new CurrentSensor("curr:1",monitor);
+  CurrentSensor * current = new CurrentSensor("cur/1",monitor);
   coap.add_resource(current);  
-  WattHourSensor * cons = new WattHourSensor("cons:1",30,current);
+  WattHourSensor * cons = new WattHourSensor("con/1",30,current);
   coap.add_resource(cons);  
   parentSensor * par = new parentSensor("r",routing);
   coap.add_resource(par);  
