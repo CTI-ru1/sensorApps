@@ -13,13 +13,13 @@
 
 #define USE_TREE_ROUTING
 
-#define REMOTE_RESET
 //Include XBEE Libraries
 #include <XBee.h>
 #include <XbeeRadio.h>
 #include <BaseRouting.h>
 #include <TreeRouting.h>
 #include <NonRouting.h>
+#include "EmonLib.h"
 //Software Reset
 #include <avr/wdt.h>
 //Include CoAP Libraries
@@ -53,7 +53,7 @@ void setup() {
   blinkTime=millis();
 
   //Connect to XBee
-  //xbee.initialize_xbee_module();
+  xbee.initialize_xbee_module();
   //start our XbeeRadio object and set our baudrate to 38400.
   xbee.begin(38400);
   //Initialize our XBee module with the correct values (using the default channel, channel 12)h
@@ -79,8 +79,23 @@ void setup() {
   // init coap service 
   coap.init(address, routing);
 
-  add_relays();
-  add_sensors();
+  coap.add_resource(new zoneSensor("lz/1", 2));
+  coap.add_resource(new zoneSensor("lz/2", 3));
+  coap.add_resource(new zoneSensor("lz/3", 4));
+  coap.add_resource(new zoneSensor("lz/4", 5));
+  coap.add_resource(new zoneSensor("lz/5", 6));
+  
+  //switchSensor* swSensor = new switchSensor("security", SECURITY_PIN, HIGH);
+  //coap.add_resource(swSensor);
+  coap.add_resource(new temperatureSensor("temp", A0));
+  coap.add_resource(new lightSensor("light", A1));
+  //methaneSensor* mh4Sensor = new methaneSensor("methane", METHANE_PIN);
+  //coap.add_resource(mh4Sensor);
+  //carbonSensor* coSensor = new carbonSensor("carbon", CARBON_PIN, HEATER_PIN);
+  //coap.add_resource(coSensor);
+  //CoapSensor* pSensor = new RandomSensor("pir", PIR_PIN);
+  coap.add_resource(new pirSensor("pir", 9));
+  //}
 
   wdt_disable();
   wdt_enable(WDTO_8S);
@@ -94,76 +109,13 @@ void loop() {
   wdt_reset();
 }
 
-uint8_t getNumOfRelays(int relayCheckPin) {
-  uint8_t relays[] = {
-    0, 0, 0, 0, 0, 0  };
-  for (int i = 0; i < 10; i++) {
-    relays[getNumOfRels(relayCheckPin)]++;
-  }
-  int num = 0;
-
-  for (int i = 1; i < 6; i++) {
-    if (relays[i] > relays[i - 1])
-      num = i;
-  }
-  return num;
-}
-
-uint8_t getNumOfRels(int relayCheckPin) {
-  int value = analogRead(relayCheckPin);
-  delay(10);
-  int relNum = 0;
-  int distance[5];
-  int thresholds[] = {    
-    0, 342, 512, 614, 683, 732 };
-  for (int i = 0; i < 6; i++) {
-    thresholds[i] < value ? distance[i] = value - thresholds[i] : distance[i] = thresholds[i] - value;
-  }
-
-  for (int i = 1; i < 6; i++)
-    if (distance[i] < distance[i - 1]) relNum = i;
-
-  return relNum;
-}
-
 void add_relays() {
-#define RELAY_CHECK_PIN A4
-  int numOfRelays = getNumOfRelays(RELAY_CHECK_PIN);
-  //int numOfRelays = 5;
-  for (int i = 0; i < numOfRelays; i++) {
-#define RELAY_START_PIN 2
-    char name [4];
-    sprintf(name,"lz%d",i+1);
-    zoneSensor * lzSensor  = new zoneSensor(name, RELAY_START_PIN + i);
-    coap.add_resource(lzSensor);
-  }
+
 }
 
 void add_sensors() {
-#define SENSORS_CHECK_PIN 12
-#define SECURITY_PIN 11
-#define TEMP_PIN A0
-#define LIGHT_PIN A1
-#define METHANE_PIN A2
-#define CARBON_PIN A3
-#define HEATER_PIN 10
-#define PIR_PIN 9
-  //pinMode(SENSORS_CHECK_PIN, INPUT);
-  //digitalWrite(SENSORS_CHECK_PIN, HIGH);
-  //bool sensorsExist = !digitalRead(SENSORS_CHECK_PIN);
-  //if (true) {
-    //switchSensor* swSensor = new switchSensor("security", SECURITY_PIN, HIGH);
-    //coap.add_resource(swSensor);
-    temperatureSensor* tempSensor = new temperatureSensor("temp", TEMP_PIN);
-    coap.add_resource(tempSensor);
-    lightSensor* liSensor = new lightSensor("light", LIGHT_PIN);
-    coap.add_resource(liSensor);
-    //methaneSensor* mh4Sensor = new methaneSensor("methane", METHANE_PIN);
-    //coap.add_resource(mh4Sensor);
-    //carbonSensor* coSensor = new carbonSensor("carbon", CARBON_PIN, HEATER_PIN);
-    //coap.add_resource(coSensor);
-    pirSensor* pSensor = new pirSensor("pir", PIR_PIN);
-    coap.add_resource(pSensor);
-  //}
+
 }
+
+
 
