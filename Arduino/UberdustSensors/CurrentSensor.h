@@ -30,6 +30,9 @@ public:
     {
       timestamp = millis();
       this->status = monitor->calcIrms(1480)*1000;  // Calculate Irms only
+      if (this->status<100){
+	this->status=0;
+      }
     }
   }
 

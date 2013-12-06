@@ -97,7 +97,7 @@ void loop() {
   routing->loop();
   wdt_reset();
 
-    if(millis() - previousMillis > interval) {
+  if(millis() - previousMillis > interval) {
     // save the last time you blinked the LED 
     previousMillis = millis();   
     if(coap.coap_has_observers()==0){
@@ -125,15 +125,20 @@ void loop() {
 void add_sensors() {
   EnergyMonitor  * monitor = new EnergyMonitor();
   monitor->current(A1, 30);      // Current: input pin, calibration.
-  //NonInvasiveSensor* NonInvasive = new NonInvasiveSensor("1S",A1);
-  //coap.add_resource(NonInvasive);  
+  monitor->calcIrms(1480)*1000;  // Calculate Irms only
+
   CurrentSensor * current = new CurrentSensor("cur/1",monitor);
-  coap.add_resource(current);  
+  coap.add_resource(current);
+
   WattHourSensor * cons = new WattHourSensor("con/1",30,current);
   coap.add_resource(cons);  
+
   parentSensor * par = new parentSensor("r",routing);
   coap.add_resource(par);  
+  
+  coap.add_resource(new DescriptionSensor("rdf","nis1\0"));  
 }
+
 
 
 
