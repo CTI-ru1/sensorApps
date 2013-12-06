@@ -16,6 +16,7 @@
 #include "LedUtils.h"
 #include "MicrophoneSensor.h"
 #include "HumiditySensor.h"
+#include "DescriptionSensor.h"
 
 #include "InvertedZoneSensor.h"
 
