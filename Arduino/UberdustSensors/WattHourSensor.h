@@ -39,6 +39,7 @@ public:
   double total(){
     unsigned long current_total = 0.0;
     for (int i=0;i<6;i++){
+      if (status[i]<100)continue;
       unsigned long partial_total =status[i];
       // P= I * V
       partial_total*=220;
