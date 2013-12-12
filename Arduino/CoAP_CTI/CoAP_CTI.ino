@@ -57,7 +57,7 @@ void setup() {
   //start our XbeeRadio object and set our baudrate to 38400.
   xbee.begin(38400);
   //Initialize our XBee module with the correct values (using the default channel, channel 12)h
-  xbee.init(12);
+  xbee.init(13);
 
 #ifdef USE_TREE_ROUTING
   routing = new TreeRouting(&xbee);
@@ -77,8 +77,9 @@ void setup() {
   routing->set_message_received_callback(radio_callback);
   //routing->setXbeeRadio(&xbee);
   // init coap service 
-  coap.init(address, routing);
+  coap.init(address, routing,"cti5");
 
+  //USE INVERTED ZONE SENSOR FOR SOME DEVICES (4EC 42f)
   coap.add_resource(new zoneSensor("lz/1", 2));
   coap.add_resource(new zoneSensor("lz/2", 3));
   coap.add_resource(new zoneSensor("lz/3", 4));
