@@ -1,5 +1,4 @@
 #include <CoapSensor.h>
-
 #include "CarbonSensor.h"
 #include "LightSensor.h"
 #include "MemorySensor.h"
@@ -17,7 +16,7 @@
 #include "MicrophoneSensor.h"
 #include "HumiditySensor.h"
 #include "DescriptionSensor.h"
-
+#include "CS_MQ7.h"
 #include "InvertedZoneSensor.h"
 
 
