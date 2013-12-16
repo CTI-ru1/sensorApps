@@ -9,6 +9,7 @@
 //Operational Parameters
 #define USE_TREE_ROUTING
 #define CHANNEL 12
+
 //Leds
 #include "LedUtils.h"
 
@@ -29,7 +30,7 @@ Rx16Response rx;
 #include <BaseRouting.h>
 #include <TreeRouting.h>
 #include <NonRouting.h>
-BaseRouting * routing;
+BaseRouting * radio;
 
 //Ethernet
 #include <SPI.h>
@@ -49,7 +50,7 @@ byte mac[] = {
 
 byte uberdustServer[] ={  
   150, 140, 5, 20};
-
+IPAddress ip(150,140,5,53);
 // Address of the XBee
 char address[5];
 // Indicator of XBee communication
@@ -166,9 +167,9 @@ void setup()
   //Setup radio using the xbee
   lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
-  routing = new TreeRouting(&xbee);
+  radio = new TreeRouting(&xbee);
 #else 
-  routing = new NonRouting(&xbee);
+  radio = new NonRouting(&xbee);
 #endif 
   radio->set_sink(true);
   wdt_reset();
@@ -183,18 +184,19 @@ void setup()
   radio->set_message_received_callback(radio_callback);
   wdt_reset();
 
+
   //Generate Unique mac based on xbee address
   uint16_t my_address = address;
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
 
+
   wdt_enable(WDTO_8S);
   wdt_reset();
-  //Ethernet.begin(mac,ip);
+  Ethernet.begin(mac,ip);
   //Connect to Network
-  //  Ethernet.begin(mac,ip);
-  if (Ethernet.begin(mac)==0){  
-    //if ( 1==0 ){      
+  //if (Ethernet.begin(mac)==0){  
+    if ( 1==0 ){      
     //Software Reset
     ledState(2);
     watchdogReset();
@@ -214,7 +216,7 @@ void setup()
 
     uint16_t * addr64hp =  ( uint16_t * ) &addr64h;
     uint16_t * addr64lp =  ( uint16_t * ) &addr64l;
-
+    
     if (addr64hp[0]!=0x0013){
       watchdogReset();
     }
@@ -253,19 +255,9 @@ void setup()
  */
 void loop()
 {
-  //  //Check server connection
-  //  if (millis() - lastCheck > 30000)
-  //  {
-  //    ledState(1);
-  //    watchdogReset();
-  //  }
-  //  else
-  //  {
-  //    ledState(0);
-  //  }
   //Check MQTT messages
   gateway.loop();
-  routing->loop();
+  radio->loop();
 
   //Blink on network traffic
   if (millis() - lastReceived > 5000)
@@ -311,3 +303,27 @@ void ledState(int theStatus)
     digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

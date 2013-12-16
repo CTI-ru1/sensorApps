@@ -2,7 +2,7 @@
 
 void TreeRouting::loop() {
     if (xbee->checkForData(112)) {
-        //Create a reusable rx16 response object to get the address
+        //Create a rx16 response object to get the address
         //wdt_reset();
         Rx16Response rx = Rx16Response();
         xbee->getResponse().getRx16Response(rx);
@@ -34,12 +34,13 @@ void TreeRouting::loop() {
 }
 
 void TreeRouting::add_child(uint16_t child) {
-    if ( is_known(child) ) return;
-    for (int i = 0; i < MAX_CHILDREN; i++) {
-        if (children[i] == 0xffff) {
-            children[i] = child;
-            return;
-        }
+    if (!is_known(child)){
+      for (int i = 0; i < MAX_CHILDREN; i++) {
+	  if (children[i] == 0xffff) {
+	      children[i] = child;
+	      return;
+	  }
+      }
     }
 }
 
@@ -146,17 +147,14 @@ void TreeRouting::timer_elapsed() {
 }
 
 uint8_t TreeRouting::state() {
-
     return state_;
 }
 
 void TreeRouting::set_my_address(uint16_t me) {
-
     this->myAddress = me;
 }
 
 void TreeRouting::set_message_received_callback(void (*received_callback)(uint16_t, byte*, unsigned int)) {
-
     this->received_callback_ = received_callback;
 }
 
