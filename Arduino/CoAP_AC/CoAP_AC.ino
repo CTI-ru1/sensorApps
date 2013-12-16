@@ -77,7 +77,7 @@ void setup() {
   routing->set_message_received_callback(radio_callback);
   //routing->setXbeeRadio(&xbee);
   // init coap service 
-  coap.init(address, routing);
+  coap.init(address, routing,"ctiac2");
 
   add_relays();
 
@@ -95,11 +95,11 @@ void loop() {
 
 void add_relays() {
     char name1 [4];
-    sprintf(name1,"ac1");
+    sprintf(name1,"ac/1");
     zoneSensor * acZone1  = new zoneSensor(name1, 2);
     coap.add_resource(acZone1);
     char name2 [4];
-    sprintf(name2,"ac2");
+    sprintf(name2,"ac/2");
     zoneSensor * acZone2  = new zoneSensor(name2, 3);
     coap.add_resource(acZone2);
 }
