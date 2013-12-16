@@ -26,6 +26,9 @@
 //Include CoAP Libraries
 #include <coap.h>
 #include <UberdustSensors.h>
+#include <CurrentSensor.h>
+#include <CurrentSensor.h>
+#include <WattHourSensor.h>
 
 //Create the XbeeRadio object we'll be using
 XBeeRadio xbee = XBeeRadio();
@@ -82,7 +85,7 @@ void setup() {
   routing->set_message_received_callback(radio_callback);
   //routing->setXbeeRadio(&xbee);
   // init coap service 
-  coap.init(address, routing);
+  coap.init(address, routing,"nis1\0");
 
   add_sensors();
 
@@ -135,9 +138,8 @@ void add_sensors() {
 
   parentSensor * par = new parentSensor("r",routing);
   coap.add_resource(par);  
-  
-  coap.add_resource(new DescriptionSensor("rdf","nis1\0"));  
 }
+
 
 
 
