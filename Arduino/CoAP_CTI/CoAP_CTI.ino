@@ -19,7 +19,6 @@
 #include <BaseRouting.h>
 #include <TreeRouting.h>
 #include <NonRouting.h>
-#include "EmonLib.h"
 //Software Reset
 #include <avr/wdt.h>
 //Include CoAP Libraries
@@ -77,18 +76,20 @@ void setup() {
   routing->set_message_received_callback(radio_callback);
   //routing->setXbeeRadio(&xbee);
   // init coap service 
-  coap.init(address, routing,"cti5");
+  coap.init(address, routing,"cti5n");
 
   //USE INVERTED ZONE SENSOR FOR SOME DEVICES (4EC 42f)
   coap.add_resource(new zoneSensor("lz/1", 2));
   coap.add_resource(new zoneSensor("lz/2", 3));
   coap.add_resource(new zoneSensor("lz/3", 4));
   coap.add_resource(new zoneSensor("lz/4", 5));
-  coap.add_resource(new zoneSensor("lz/5", 6));
+  coap.add_resource(new zoneSensor("lz/5", 6));  
+//  coap.add_resource(new InvertedZoneSensor("lz/4", 5));
+//  coap.add_resource(new InvertedZoneSensor("lz/5", 6));
   
   //switchSensor* swSensor = new switchSensor("security", SECURITY_PIN, HIGH);
   //coap.add_resource(swSensor);
-  coap.add_resource(new temperatureSensor("temp", A0));
+  coap.add_resource(new LM35Sensor("temp", A0));
   coap.add_resource(new lightSensor("light", A1));
   //methaneSensor* mh4Sensor = new methaneSensor("methane", METHANE_PIN);
   //coap.add_resource(mh4Sensor);
