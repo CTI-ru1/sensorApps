@@ -50,7 +50,7 @@ byte mac[] = {
 
 byte uberdustServer[] ={  
   150, 140, 5, 20};
-IPAddress ip(150,140,5,5);
+IPAddress ip(150,140,5,53);
 // Address of the XBee
 char address[5];
 // Indicator of XBee communication
@@ -216,6 +216,13 @@ void setup()
 
     uint16_t * addr64hp =  ( uint16_t * ) &addr64h;
     uint16_t * addr64lp =  ( uint16_t * ) &addr64l;
+    
+    if (addr64hp[0]!=0x0013){
+      watchdogReset();
+    }
+    if (addr64hp[0]==addr64lp[0]){
+      watchdogReset();
+    }
 
     sprintf(testbedHash, "%4x%4x%4x%4x",addr64hp[0],addr64hp[1],addr64lp[0],addr64lp[1]);
 

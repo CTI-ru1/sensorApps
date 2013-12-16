@@ -217,6 +217,13 @@ void setup()
     uint16_t * addr64hp =  ( uint16_t * ) &addr64h;
     uint16_t * addr64lp =  ( uint16_t * ) &addr64l;
 
+    if (addr64hp[0]!=0x0013){
+      watchdogReset();
+    }
+    if (addr64hp[0]==addr64lp[0]){
+      watchdogReset();
+    }
+
     sprintf(testbedHash, "%4x%4x%4x%4x",addr64hp[0],addr64hp[1],addr64lp[0],addr64lp[1]);
 
     for (int i=0;i<64;i++){
