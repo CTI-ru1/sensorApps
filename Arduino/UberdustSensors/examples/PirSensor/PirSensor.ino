@@ -1,13 +1,3 @@
-//Include XBEE Libraries
-#include <XBee.h>
-#include <XbeeRadio.h>
-#include <BaseRouting.h>
-#include <TreeRouting.h>
-#include <NonRouting.h>
-//Software Reset
-#include <avr/wdt.h>
-//Include CoAP Libraries
-#include <coap.h>
 #include <UberdustSensors.h>
 
 pirSensor * sensor;
