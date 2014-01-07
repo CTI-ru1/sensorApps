@@ -7,8 +7,10 @@
  */
 
 //Operational Parameters
-#define USE_TREE_ROUTING
+//#define USE_TREE_ROUTING
 #define CHANNEL 12
+
+#include <EEPROM.h>
 
 //Leds
 #include "LedUtils.h"
@@ -211,27 +213,40 @@ void setup()
     //create the unique id based on the xbee mac address
     char testbedHash[17];
 
-    uint32_t addr64h = xbee.getMyAddress64High();
-    uint32_t addr64l = xbee.getMyAddress64Low();
-
-    uint16_t * addr64hp =  ( uint16_t * ) &addr64h;
-    uint16_t * addr64lp =  ( uint16_t * ) &addr64l;
-
-    if (addr64hp[0]!=0x0013){
-      watchdogReset();
+    if ( EEPROM.read(0) == 67 ){
+      for (int i = 0; i < 17; i++){
+        testbedHash[i]= EEPROM.read(1+i);
+      }  
     }
-    if (addr64hp[0]==addr64lp[0]){
-      watchdogReset();
-    }
+    else{
 
-    sprintf(testbedHash, "%4x%4x%4x%4x",addr64hp[0],addr64hp[1],addr64lp[0],addr64lp[1]);
 
-    for (int i=0;i<64;i++){
-      if (testbedHash[i]==' '){
-        testbedHash[i]='0';
+      uint32_t addr64h = xbee.getMyAddress64High();
+      uint32_t addr64l = xbee.getMyAddress64Low();
+
+      uint16_t * addr64hp =  ( uint16_t * ) &addr64h;
+      uint16_t * addr64lp =  ( uint16_t * ) &addr64l;
+
+      if (addr64hp[0]!=0x0013){
+        watchdogReset();
       }
-    }
+      if (addr64hp[0]==addr64lp[0]){
+        watchdogReset();
+      }
 
+      sprintf(testbedHash, "%4x%4x%4x%4x",addr64hp[0],addr64hp[1],addr64lp[0],addr64lp[1]);
+
+      for (int i=0;i<64;i++){
+        if (testbedHash[i]==' '){
+          testbedHash[i]='0';
+        }
+      }
+
+      EEPROM.write(0, 67);
+      for (int i = 0; i < 17; i++){
+        EEPROM.write(1+i, testbedHash[i]);
+      }  
+    }
     gateway.setTestbedID(testbedHash);
     gateway.connect(callback);
 
@@ -303,6 +318,9 @@ void ledState(int theStatus)
     digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
   }
 }
+
+
+
 
 
 
