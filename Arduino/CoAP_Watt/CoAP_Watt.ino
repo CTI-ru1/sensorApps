@@ -135,9 +135,6 @@ void add_sensors() {
 
   WattHourSensor * cons = new WattHourSensor("con/1",30,current);
   coap.add_resource(cons);  
-
-  parentSensor * par = new parentSensor("r",routing);
-  coap.add_resource(par);  
 }
 
 
