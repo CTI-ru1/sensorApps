@@ -96,6 +96,10 @@ bool CoapSensor::is_changed() {
     return changed;
 }
 
+int CoapSensor::get_status() {
+    return status;
+}
+
 void CoapSensor::mark_notified() {
     changed = false;
 }

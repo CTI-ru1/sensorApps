@@ -54,6 +54,7 @@ public:
     virtual void check(void);
     virtual void get_value(uint8_t* output_data, size_t* output_data_len);
     virtual void set_value(uint8_t* input_data, size_t input_data_len, uint8_t* output_data, size_t* output_data_len);
+    int get_status();
 private:
     char name[CONF_COAP_RESOURCE_NAME_SIZE];
     bool fast;
@@ -63,6 +64,7 @@ private:
     uint8_t disable_method(uint8_t method);
 protected:
     bool changed;
+    int status;
 };
 
 #endif
