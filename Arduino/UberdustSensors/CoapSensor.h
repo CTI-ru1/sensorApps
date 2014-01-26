@@ -55,6 +55,14 @@ public:
     virtual void get_value(uint8_t* output_data, size_t* output_data_len);
     virtual void set_value(uint8_t* input_data, size_t input_data_len, uint8_t* output_data, size_t* output_data_len);
     int get_status();
+    
+    uint8_t method_allowed(uint8_t method) {
+      if (method == 3)
+	  method = 4;
+      else if (method == 4)
+	  method = 8;
+      return get_method() & method;
+    }
 private:
     char name[CONF_COAP_RESOURCE_NAME_SIZE];
     bool fast;
