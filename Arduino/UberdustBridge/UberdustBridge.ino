@@ -7,8 +7,8 @@
  */
 
 //Operational Parameters
-//#define USE_TREE_ROUTING
-#define CHANNEL 12
+#define USE_TREE_ROUTING
+#define CHANNEL 13
 
 #include <EEPROM.h>
 
@@ -159,10 +159,10 @@ void setup()
   wdt_enable(WDTO_8S);
 
   //Connect to XBee
-  xbee.begin(38400);
+  //xbee.begin(38400);
   wdt_reset();
   //Initialize our XBee module with the correct values using CHANNEL
-  xbee.init(CHANNEL);
+  xbee.init(CHANNEL,38400);
   wdt_reset();
   ledState(1);
 
