@@ -7,7 +7,7 @@
  */
 
 //Operational Parameters
-//#define USE_TREE_ROUTING
+#define USE_TREE_ROUTING
 #define CHANNEL 12
 
 #include <EEPROM.h>
@@ -146,51 +146,7 @@ void setup()
   pinMode(6, OUTPUT);
   pinMode(2, OUTPUT);
   bootblink();
-  ledState(2);
-
-  //Flush serial to cleanup xbee connection
-  Serial.begin(38400);
-  Serial.flush();
-  Serial.end();
-
-  //Auto-reset if something goes bad
-  wdt_reset();
-  wdt_disable();
-  wdt_enable(WDTO_8S);
-
-  //Connect to XBee
-  xbee.begin(38400);
-  wdt_reset();
-  //Initialize our XBee module with the correct values using CHANNEL
-  xbee.init(CHANNEL);
-  wdt_reset();
-  ledState(1);
-
-  //Setup radio using the xbee
-  lastReceivedStatus = false;
-#ifdef USE_TREE_ROUTING
-  radio = new TreeRouting(&xbee);
-#else 
-  radio = new NonRouting(&xbee);
-#endif 
-  radio->set_sink(true);
-  wdt_reset();
-
-  uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
-  uint8_t * bit = ((uint8_t*) & address);
-  uint8_t mbyte = bit[1];
-  uint8_t lbyte = bit[0];
-  bit[0] = mbyte;
-  bit[1] = lbyte;
-  radio->set_my_address(address);
-  radio->set_message_received_callback(radio_callback);
-  wdt_reset();
-
-
-  //Generate Unique mac based on xbee address
-  uint16_t my_address = address;
-  mac[4] = (&my_address)[1];
-  mac[5] = (&my_address)[0];
+  ledState(STATE_BOOT);
 
 
   wdt_enable(WDTO_8S);
@@ -200,14 +156,14 @@ void setup()
   if (Ethernet.begin(mac)==0){  
     //if ( 1==0 ){      
     //Software Reset
-    ledState(2);
+    ledState(STATE_ERROR);
     watchdogReset();
   }
   else
   {
     wdt_reset();
     //Connect to MQTT broker
-    ledState(0);
+    ledState(STATE_ETH);
     gateway.setUberdustServer(uberdustServer);
 
     //create the unique id based on the xbee mac address
@@ -216,10 +172,16 @@ void setup()
     if ( EEPROM.read(0) == 67 ){
       for (int i = 0; i < 17; i++){
         testbedHash[i]= EEPROM.read(1+i);
-      }  
+      }
+      gateway.setTestbedID(testbedHash);
+      gateway.connect(callback);
+      gateway.publish("connect","xbee-connected");
+      connectXbee();
+
     }
     else{
 
+      connectXbee();
 
       uint32_t addr64h = xbee.getMyAddress64High();
       uint32_t addr64l = xbee.getMyAddress64Low();
@@ -246,9 +208,13 @@ void setup()
       for (int i = 0; i < 17; i++){
         EEPROM.write(1+i, testbedHash[i]);
       }  
+
+      gateway.setTestbedID(testbedHash);
+      gateway.connect(callback);
+      gateway.publish("connect","xbee-connected2");
     }
-    gateway.setTestbedID(testbedHash);
-    gateway.connect(callback);
+
+
 
   }
 
@@ -320,28 +286,52 @@ void ledState(int theStatus)
 }
 
 
+void connectXbee(){
+
+  //Auto-reset if something goes bad
+  wdt_reset();
+  wdt_disable();
+  wdt_enable(WDTO_8S);
+
+  //Connect to XBee
+  wdt_reset();
+  wdt_disable();
+  //Initialize our XBee module with the correct values using CHANNEL
+  xbee.initialize_xbee_module();
+  int value = xbee.init(CHANNEL,38400);
+  wdt_reset();
+  char mess[20];
+  sprintf(mess, "xbee-init-%d",value);
+  gateway.publish("connect",mess);
+  wdt_reset();
+  ledState(STATE_XBEE);
+
+  //Setup radio using the xbee
+  lastReceivedStatus = false;
+#ifdef USE_TREE_ROUTING
+  radio = new TreeRouting(&xbee);
+#else 
+  radio = new NonRouting(&xbee);
+#endif 
+  radio->set_sink(true);
+  wdt_reset();
+
+  uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
+  uint8_t * bit = ((uint8_t*) & address);
+  uint8_t mbyte = bit[1];
+  uint8_t lbyte = bit[0];
+  bit[0] = mbyte;
+  bit[1] = lbyte;
+  radio->set_my_address(address);
+  radio->set_message_received_callback(radio_callback);
+  wdt_reset();
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  //Generate Unique mac based on xbee address
+  uint16_t my_address = address;
+  mac[4] = (&my_address)[1];
+  mac[5] = (&my_address)[0];
+}
 
 
 

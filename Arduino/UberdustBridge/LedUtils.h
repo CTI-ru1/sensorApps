@@ -1,5 +1,9 @@
 #include <Arduino.h>
 
+#define STATE_BOOT 2
+#define STATE_ERROR 2
+#define STATE_ETH 1
+#define STATE_XBEE 0
 /**
  * Fancy reboot indicator
  */

@@ -56,6 +56,10 @@ void UberdustGateway::publish(uint16_t address, uint8_t * message,uint8_t length
 } 
 
 
+void UberdustGateway::publish(char * topic,char * message){
+  mqttClient->publish(topic,message);
+
+} 
 
 
 void UberdustGateway::pongServer(){
