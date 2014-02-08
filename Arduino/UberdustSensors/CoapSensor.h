@@ -37,6 +37,14 @@ public:
         this->content_type = TEXT_PLAIN;
         this->changed = false;
     }
+    CoapSensor(char * name,int report_interval) {
+        this->method = GET | POST;
+        strcpy(this->name ,name);
+        this->fast = true;
+        this->notify_time = report_interval;
+        this->content_type = TEXT_PLAIN;
+        this->changed = false;
+    }
 
     coap_status_t callback(uint8_t method, uint8_t* input_data, size_t input_data_len, uint8_t* output_data, size_t* output_data_len, queries_t queries);
     uint8_t get_method();
@@ -63,6 +71,9 @@ public:
 	  method = 8;
       return get_method() & method;
     }
+protected:
+    void send_value(unsigned long value ,uint8_t* output_data, size_t* output_data_len);
+
 private:
     char name[CONF_COAP_RESOURCE_NAME_SIZE];
     bool fast;
@@ -73,6 +84,7 @@ private:
 protected:
     bool changed;
     int status;
+    int pin;
 };
 
 #endif

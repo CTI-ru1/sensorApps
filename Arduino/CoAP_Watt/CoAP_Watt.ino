@@ -64,9 +64,8 @@ void setup() {
   //Connect to XBee
   //xbee.initialize_xbee_module();
   //start our XbeeRadio object and set our baudrate to 38400.
-  xbee.begin(38400);
   //Initialize our XBee module with the correct values (using the default channel, channel 12)h
-  xbee.init(13);
+  xbee.init(13,38400);
 
 #ifdef USE_TREE_ROUTING
   routing = new TreeRouting(&xbee);
@@ -126,15 +125,33 @@ void loop() {
 
 
 void add_sensors() {
-  EnergyMonitor  * monitor = new EnergyMonitor();
-  monitor->current(A1, 30);      // Current: input pin, calibration.
-  monitor->calcIrms(1480)*1000;  // Calculate Irms only
+    coap.add_resource(new zoneSensor("lz/1", 2));
+    coap.add_resource(new zoneSensor("lz/2", 3));
+    coap.add_resource(new zoneSensor("lz/3", 4));
+    coap.add_resource(new zoneSensor("lz/4", 5));
+//  EnergyMonitor  * monitor1 = new EnergyMonitor();
+//  monitor1->current(A0, 30);      // Current: input pin, calibration.
+//  monitor1->calcIrms(1480)*1000;  // Calculate Irms only
+//  EnergyMonitor  * monitor2 = new EnergyMonitor();
+//  monitor2->current(A1, 30);      // Current: input pin, calibration.
+//  monitor2->calcIrms(1480)*1000;  // Calculate Irms only
+//  EnergyMonitor  * monitor3 = new EnergyMonitor();
+//  monitor3->current(A2, 30);      // Current: input pin, calibration.
+//  monitor3->calcIrms(1480)*1000;  // Calculate Irms only
 
-  CurrentSensor * current = new CurrentSensor("cur/1",monitor);
-  coap.add_resource(current);
+  CurrentSensor * current1 = new CurrentSensor("cur/1",A0);
+  coap.add_resource(current1);
+  CurrentSensor * current2 = new CurrentSensor("cur/1",A1);
+  coap.add_resource(current2);
+  CurrentSensor * current3 = new CurrentSensor("cur/1",A2);
+  coap.add_resource(current3);
 
-  WattHourSensor * cons = new WattHourSensor("con/1",30,current);
-  coap.add_resource(cons);  
+  WattHourSensor * cons1 = new WattHourSensor("con/1",30,current1);
+  coap.add_resource(cons1);  
+  WattHourSensor * cons2 = new WattHourSensor("con/2",30,current2);
+  coap.add_resource(cons2);  
+  WattHourSensor * cons3 = new WattHourSensor("con/3",30,current3);
+  coap.add_resource(cons3);  
 }
 
 

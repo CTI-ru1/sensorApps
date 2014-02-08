@@ -11,8 +11,8 @@
 #include "ZoneSensor.h"
 #include "RandomSensor.h"
 #include "UltrasonicSensor.h"
-//#include "CurrentSensor.h"
-//#include "WattHourSensor.h"
+#include <CurrentSensor.h>
+#include <WattHourSensor.h>
 #include "LedUtils.h"
 #include "MicrophoneSensor.h"
 #include "HumiditySensor.h"

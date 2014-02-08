@@ -57,7 +57,7 @@ uint8_t CoapSensor::set_content_type(uint8_t content_type) {
 }
 
 coap_status_t CoapSensor::callback(uint8_t method, uint8_t* input_data, size_t input_data_len, uint8_t* output_data, size_t* output_data_len, queries_t queries) {
-    char bla[] = "default";
+    static char bla[] = "default";
     memcpy(output_data, bla, strlen(bla) + 1);
     *output_data_len = strlen(bla) + 1;
     if (method == GET) {
@@ -102,4 +102,8 @@ int CoapSensor::get_status() {
 
 void CoapSensor::mark_notified() {
     changed = false;
+}
+
+void CoapSensor::send_value(unsigned long value ,uint8_t* output_data, size_t* output_data_len){
+    *output_data_len = sprintf((char *)output_data,"%d",value);
 }
