@@ -5,14 +5,14 @@ public CoapSensor
 {
 public:
   int pin, status;
-  temperatureSensor* temp;
+ temperatureSensor* temp;
   humiditySensor(char * name, int pin, temperatureSensor* temp): 
   CoapSensor(name)
   {
     this->temp=temp;
     this->pin = pin;
     this->status = 0;
-    this->set_notify_time(10);
+    this->set_notify_time(30);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {

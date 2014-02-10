@@ -5,7 +5,8 @@ public CoapSensor
 {
 public:
   int pin, status;
-  LM35Sensor(char * name, int pin): 
+
+  LM35Sensor(char * name, int pin):
   CoapSensor(name)
   {
     this->pin = pin;
@@ -21,10 +22,14 @@ public:
     static unsigned long timestamp = 0;
     if(millis() - timestamp > 5000)
     {
-      int newStatus = analogRead(this->pin)*100;  // read the value from the sensor
+      //int newStatus = analogRead(this->pin)*100;  // read the value from the sensor
 
-      newStatus = ((newStatus/1024)* 5000)/10/100;  
-      if(newStatus != this->status)
+     // newStatus = ((newStatus/1024)* 5000)/10/100;  
+	float temperature = analogRead(this->pin)*0.0049;
+	temperature=temperature*100;  
+	int newStatus=temperature;    
+
+	if(newStatus != this->status)
       {
         this->status = newStatus;
       }

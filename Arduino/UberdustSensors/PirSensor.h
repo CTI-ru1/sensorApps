@@ -25,7 +25,7 @@ public:
     if(millis() - timestamp > 1000)
     {
       timestamp = millis();
-      int newStatus = !digitalRead(this->pin); // read the value from the sensor
+      int newStatus = digitalRead(this->pin); // read the value from the sensor
       if(newStatus != this->status)
       {
         this->status = newStatus;
