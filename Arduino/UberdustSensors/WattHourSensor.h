@@ -10,17 +10,18 @@ public:
   unsigned long  ctotal;
   CurrentSensor * monitor;
   WattHourSensor(char * name, int report_interval,CurrentSensor* monitor): 
-  CoapSensor(name,report_interval)
+  CoapSensor(name)
   {    
     for (int i=0;i<6;i++){
 	this->status[i]=0.0;
     }
     this->monitor=monitor;
     this->ctotal=0.0;
+    this->set_notify_time(report_interval);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
-    send_value(this->ctotal,output_data,output_data_len);
+    *output_data_len = sprintf( (char*)output_data, "%ld",this->ctotal); 
   }
   void check(void)
   {
@@ -38,7 +39,7 @@ public:
   double total(){
     unsigned long current_total = 0.0;
     for (int i=0;i<6;i++){
-      if (status[i]>=100){
+      if (status[i]<100)continue;
       unsigned long partial_total =status[i];
       // P= I * V
       partial_total*=220;
@@ -46,7 +47,6 @@ public:
       partial_total*=5;
       partial_total/=3600;
       current_total+=partial_total;
-      }
     }
     //convert to WH
     return current_total;
