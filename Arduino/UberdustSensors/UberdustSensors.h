@@ -6,7 +6,7 @@
 //#include "ParentSensor.h"
 #include "PirSensor.h"
 #include "SwitchSensor.h"
-#include "vcc.h"
+// #include "vcc.h"
 #include "TemperatureSensor.h"
 //#include "LM35Sensor.h"
 #include "ZoneSensor.h"
@@ -17,7 +17,7 @@
 #include "LedUtils.h"
 #include "MicrophoneSensor.h"
 #include "HumiditySensor.h"
-#include "CS_MQ7.h"
+// #include "CS_MQ7.h"
 #include "InvertedZoneSensor.h"
 //#include "TemperatureSensor2.h"
 
