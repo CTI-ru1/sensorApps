@@ -8,7 +8,7 @@
 
 //Operational Parameters
 #define USE_TREE_ROUTING
-#define CHANNEL 13
+#define CHANNEL 12
 
 #include <EEPROM.h>
 
@@ -147,8 +147,9 @@ void setup()
   pinMode(2, OUTPUT);
   bootblink();
   ledState(STATE_BOOT);
-
-
+  for (int i=0;i<2;i++){
+    mac[i]=EEPROM.read(i+17-2);
+  }
   //wdt_enable(WDTO_8S);
   //wdt_reset();
   //Ethernet.begin(mac,ip);
@@ -161,14 +162,15 @@ void setup()
   }
   else
   {
-  wdt_enable(WDTO_8S);
-  wdt_reset();
+    wdt_enable(WDTO_8S);
+    wdt_reset();
     //Connect to MQTT broker
     ledState(STATE_ETH);
     gateway.setUberdustServer(uberdustServer);
 
     //create the unique id based on the xbee mac address
     char testbedHash[17];
+
 
     if ( EEPROM.read(0) == 67 ){
       for (int i = 0; i < 17; i++){
@@ -333,6 +335,7 @@ void connectXbee(){
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
 }
+
 
 
 
