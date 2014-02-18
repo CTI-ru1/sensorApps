@@ -48,7 +48,7 @@ UberdustGateway gateway(&ethernetClient);
 
 //Update these with values suitable for your network/broker.
 byte mac[] = {  
-  0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xaa};
+  0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xab};
 
 byte uberdustServer[] ={  
   150, 140, 5, 20};
@@ -147,9 +147,9 @@ void setup()
   pinMode(2, OUTPUT);
   bootblink();
   ledState(STATE_BOOT);
-  for (int i=0;i<2;i++){
-    mac[i]=EEPROM.read(i+17-2);
-  }
+  //for (int i=0;i<2;i++){
+  //  mac[i]=EEPROM.read(i+17-2);
+  //}
   //wdt_enable(WDTO_8S);
   //wdt_reset();
   //Ethernet.begin(mac,ip);
@@ -305,7 +305,7 @@ void connectXbee(){
   wdt_reset();
   char mess[20];
   sprintf(mess, "xbee-init-%d",value);
-  gateway.publish("connect",mess);
+  //ugateway.publish("connect",mess);
   wdt_reset();
   ledState(STATE_XBEE);
 
