@@ -24,6 +24,7 @@ public:
 
   //  void publish(char * message);
   void publish(uint16_t address, uint8_t * message,uint8_t length);
+  void publish(char * topic,char * message);
 
   void pongServer();
 
@@ -45,5 +46,4 @@ private:
   EthernetClient *ethernetClient;
   PubSubClient *mqttClient;
   unsigned long xcounter,ycounter;
-
 };
