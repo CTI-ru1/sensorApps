@@ -8,7 +8,7 @@
 
 //Operational Parameters
 #define USE_TREE_ROUTING
-#define CHANNEL 12
+#define CHANNEL 13
 
 #include <EEPROM.h>
 
@@ -162,6 +162,9 @@ void setup()
   }
   else
   {
+    Serial.begin(9600);
+    Serial.println(Ethernet.localIP());
+    Serial.end();
     wdt_enable(WDTO_8S);
     wdt_reset();
     //Connect to MQTT broker
@@ -176,6 +179,16 @@ void setup()
       for (int i = 0; i < 17; i++){
         testbedHash[i]= EEPROM.read(1+i);
       }
+
+      Serial.begin(9600);
+      char hash[40];
+      for (int i = 0; i < 17; i++){
+        sprintf(hash+i*2,"%x",(char)EEPROM.read(1+i));
+      }
+      Serial.print("Hash:");
+      Serial.println(hash);
+      Serial.end();
+
       gateway.setTestbedID(testbedHash);
       gateway.connect(callback);
       gateway.publish("connect","xbee-connected");
@@ -184,6 +197,11 @@ void setup()
     }
     else{
 
+      Serial.begin(9600);
+      Serial.println("Connecting to xbee");
+      Serial.end();
+      
+      
       connectXbee();
 
       uint32_t addr64h = xbee.getMyAddress64High();
@@ -335,6 +353,8 @@ void connectXbee(){
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
 }
+
+
 
 
 
