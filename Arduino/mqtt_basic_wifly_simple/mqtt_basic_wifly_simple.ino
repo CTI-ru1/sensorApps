@@ -15,9 +15,9 @@
 //Software Reset
 #include <avr/wdt.h>
 
-#define LED_RED 16
+#define LED_RED 9
 #define LED_GREEN 10
-#define WIFLY_PIN 15
+#define WIFLY_PIN 6
 
 MqttFlare *flare ;
 

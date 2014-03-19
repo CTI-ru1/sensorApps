@@ -106,10 +106,10 @@ void sensors_loop()
 
 
 void add_sensors() {
-  flare->registerSensor(new zoneSensor("r/1\0",6));    
-  flare->registerSensor(new zoneSensor("r/2\0",7));    
-  flare->registerSensor(new zoneSensor("r/3\0",8));    
-  flare->registerSensor(new zoneSensor("r/4\0",9));  
+  flare->registerSensor(new zoneSensor("r/1\0",2));    
+  flare->registerSensor(new zoneSensor("r/2\0",3));    
+  flare->registerSensor(new zoneSensor("r/3\0",4));    
+  flare->registerSensor(new zoneSensor("r/4\0",5));  
 
   Serial.println("add_sensors()");
   EnergyMonitor  * monitor1 = new EnergyMonitor();
