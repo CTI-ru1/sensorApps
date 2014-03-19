@@ -1,4 +1,5 @@
 #include <CoapSensor.h>
+#include <EEPROM.h>
 
 class zoneSensor : 
 public CoapSensor 
@@ -13,9 +14,8 @@ public:
   CoapSensor(name,30)
   {
     this->pin = pin;
-    this->status = 0;
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW);
+    set(EEPROM.read(100+pin)>0?1:0);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -31,6 +31,8 @@ public:
   inline void set(uint8_t value)
   {
     this->status = value;
+    EEPROM.write(100+pin,this->status);
     digitalWrite(pin, status);
   }
+private:
 };
