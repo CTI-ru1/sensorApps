@@ -8,6 +8,8 @@ public:
   unsigned long status[6];
   unsigned long  interval_factor;
   unsigned long  ctotal;
+  unsigned long timestamp ;
+  unsigned long index ;
   CurrentSensor * monitor;
   WattHourSensor(char * name, int report_interval,CurrentSensor* monitor): 
   CoapSensor(name)
@@ -18,6 +20,9 @@ public:
     this->monitor=monitor;
     this->ctotal=0.0;
     this->set_notify_time(report_interval);
+    timestamp = 0;
+    index = 0;
+  
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
   {
@@ -25,8 +30,7 @@ public:
   }
   void check(void)
   {
-    static unsigned long timestamp = 0;
-    static unsigned long index = 0;
+    
     if(millis() - timestamp > 5000)
     {
       timestamp = millis();
