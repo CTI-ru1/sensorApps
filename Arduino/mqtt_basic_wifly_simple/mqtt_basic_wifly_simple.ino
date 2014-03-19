@@ -38,17 +38,25 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   if (strncmp("heartbeat",topic,9)==0){
     wdt_reset();
+
   }  
   else{
     char *newtopic = strchr(topic,'/');
     newtopic++;
-    char response[10];
-    size_t rlength;
-    flare->action(newtopic,(char *)payload,length,response,&rlength);  
-    client->publish(&topic[1],response);
-    Serial.println(&topic[1]);
-    Serial.println(response);
-    delay(10);
+    if (strcmp("reset",newtopic)==0){
+      wdt_enable(WDTO_2S);
+      while(1){
+      };
+    }
+    else{
+      char response[10];
+      size_t rlength;
+      flare->action(newtopic,(char *)payload,length,response,&rlength);  
+      client->publish(&topic[1],response);
+      Serial.println(&topic[1]);
+      Serial.println(response);
+      delay(10);
+    }
   }
 }
 
@@ -94,7 +102,10 @@ void setup()
   delay(10);
   client->subscribe(flare->channel());
 
-
+  Serial.print("Started in ");
+  Serial.print(millis());
+  Serial.println(" ms");
+  
   //all set -- change the leds!
   digitalWrite(LED_RED,LOW);
   digitalWrite(LED_GREEN,HIGH);
@@ -111,19 +122,19 @@ void loop()
     Serial.println("Client Disconnected.");
     /*
     digitalWrite(LED_RED, HIGH);
-    delay(1000);
-    digitalWrite(LED_RED, LOW);
-    delay(1000);
-    digitalWrite(LED_RED, HIGH);
-    delay(1000);
-    digitalWrite(LED_RED, LOW);
-    delay(1000);
-    int retries = connect2MQTT();
-    Serial.println("With retries");
-    //all set again -- change the leds!
-    digitalWrite(LED_RED,LOW);
-    digitalWrite(LED_GREEN,HIGH);
-    */
+     delay(1000);
+     digitalWrite(LED_RED, LOW);
+     delay(1000);
+     digitalWrite(LED_RED, HIGH);
+     delay(1000);
+     digitalWrite(LED_RED, LOW);
+     delay(1000);
+     int retries = connect2MQTT();
+     Serial.println("With retries");
+     //all set again -- change the leds!
+     digitalWrite(LED_RED,LOW);
+     digitalWrite(LED_GREEN,HIGH);
+     */
 
   }
   else{
@@ -133,6 +144,7 @@ void loop()
     }
   }
 }
+
 
 
 

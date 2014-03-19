@@ -51,11 +51,9 @@ int connect2MQTT(){
   digitalWrite(LED_GREEN,LOW);
   digitalWrite(LED_RED,HIGH);
   int retries=0;
-  wdt_enable(WDTO_8S);
+  //wdt_enable(WDTO_8S);
   Serial.print("Connecting to MQTT...");
-  char clientId [50];
-  sprintf(clientId,"%s%d",flare->mac(),rand()%1000);
-  while(!client->connect(clientId)) {
+  while(!client->connect(flare->mac())) {
     wdt_reset();
     retries++;
     Serial.println("failed!");
@@ -106,10 +104,10 @@ void sensors_loop()
 
 
 void add_sensors() {
-  flare->registerSensor(new zoneSensor("r/1\0",2));    
-  flare->registerSensor(new zoneSensor("r/2\0",3));    
-  flare->registerSensor(new zoneSensor("r/3\0",4));    
-  flare->registerSensor(new zoneSensor("r/4\0",5));  
+  flare->registerSensor(new zoneSensor("r/1\0",2));  //2  
+  flare->registerSensor(new zoneSensor("r/2\0",3));  //3
+  flare->registerSensor(new zoneSensor("r/3\0",4));  //4  
+  flare->registerSensor(new zoneSensor("r/4\0",5));  //5
 
   Serial.println("add_sensors()");
   EnergyMonitor  * monitor1 = new EnergyMonitor();
