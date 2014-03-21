@@ -3,6 +3,9 @@
 #include <avr/wdt.h>
 
 
+
+
+
 void resetWiFly(int pin){
   Serial.println("resetWiFly()");
   pinMode(pin,OUTPUT);
@@ -18,7 +21,7 @@ void resetWiFly(int pin){
     unsigned long diff =millis()-initdelay;
     delay(1000);
   }
-  
+
   //set serials for WiFly -- only for pro micro is Serial1
   Serial1.begin(9600);   // Start hardware Serial for the RN-XV
   WiFly.setUart(&Serial1);
@@ -45,13 +48,15 @@ int connect2WiFi(){
   Serial.println("ok!");
 }
 
-int connect2MQTT(){
+int connect2MQTT(boolean reconnect=false){
   Serial.println("connect2MQTT()");
   client = new PubSubClient("console.sensorflare.com", 1883, callback, wiFlyClient);
   digitalWrite(LED_GREEN,LOW);
   digitalWrite(LED_RED,HIGH);
   int retries=0;
-  //wdt_enable(WDTO_8S);
+  if (reconnect){
+    wdt_enable(WDTO_8S);
+  }
   Serial.print("Connecting to MQTT...");
   while(!client->connect(flare->mac())) {
     wdt_reset();
@@ -109,7 +114,7 @@ void add_sensors() {
   flare->registerSensor(new zoneSensor("r/3\0",4));  //4  
   flare->registerSensor(new zoneSensor("r/4\0",5));  //5
 
-  Serial.println("add_sensors()");
+    Serial.println("add_sensors()");
   EnergyMonitor  * monitor1 = new EnergyMonitor();
   monitor1->current(A1, 30);      // Current: input pin, calibration.
   monitor1->calcIrms(1480)*1000;  // Calculate Irms only
@@ -136,6 +141,32 @@ void add_sensors() {
 
 }
 
+
+
+void establishConnection(){
+  //RESET WIFLY
+  resetWiFly(WIFLY_PIN);
+
+  //connect to the wifi network
+  connect2WiFi();
+
+  //get the wifly unique mac address
+  flare->setMac(WiFly.getMAC());
+  Serial.print("WiFi mac is:");
+  Serial.println(WiFly.getMAC());
+  //connect to the mqtt broker
+  int retries = connect2MQTT();
+
+  //publish and subscribe
+  client->publish("connect",flare->connect(1));
+  delay(10);
+  client->publish("retries",flare->retries(retries));
+  delay(10);
+  client->subscribe("heartbeat");
+  delay(10);
+  client->subscribe(flare->channel());
+
+}
 
 
 
