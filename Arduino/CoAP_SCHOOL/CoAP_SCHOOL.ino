@@ -66,9 +66,9 @@ void setup() {
   //Connect to XBee
   //xbee.initialize_xbee_module();
   //start our XbeeRadio object and set our baudrate to 38400.
-  xbee.begin(38400);
+  //xbee.begin(38400);
   //Initialize our XBee module with the correct values (using the default channel, channel 12)h
-  xbee.init(12);
+  xbee.init(12,38400);
 
 #ifdef USE_TREE_ROUTING
   routing = new TreeRouting(&xbee);
