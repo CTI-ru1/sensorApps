@@ -10,9 +10,11 @@ public CoapSensor
 public:
   int status;
   EnergyMonitor *monitor;
+  unsigned long timestamp;
   CurrentSensor (char * name,   EnergyMonitor *monitor): 
   CoapSensor(name)
   {    
+    timestamp = 0;
     this->monitor = monitor;
     monitor->calcIrms(1480);  // Calculate Irms only
     this->status=0.0;
@@ -27,7 +29,6 @@ public:
 
   void check(void)
   {
-    static unsigned long timestamp = 0;
     if(millis() - timestamp > 5000)
     {
       timestamp = millis();
