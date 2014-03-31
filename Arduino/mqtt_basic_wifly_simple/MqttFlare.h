@@ -2,7 +2,7 @@
 #define MQTT_FLARE
 
 #include <CoapSensor.h>
-
+#include <WiFlyHQ.h>
 
 class MqttFlare{
 
@@ -12,6 +12,7 @@ public :
   }
 
   void setMac(char * wifly_mac){
+
     int j=0;
     for (int i =0 ; i<strlen(wifly_mac) ; i++){
       if (wifly_mac[i]!=':'){
@@ -22,7 +23,7 @@ public :
 
     sprintf(_channel, "s%s/#",_mac);
   }
-
+  
   char * mac(){
     return _mac;
   }  

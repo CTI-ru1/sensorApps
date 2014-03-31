@@ -7,7 +7,7 @@
 
 
 void resetWiFly(int pin){
-  Serial.println("resetWiFly()");
+  DBGL("resetWiFly()");
   pinMode(pin,OUTPUT);
   digitalWrite(pin,LOW);
   delay(3000);
@@ -15,56 +15,63 @@ void resetWiFly(int pin){
 
   //give some time to the wifly to start-up
   static unsigned long initdelay = millis();
-  Serial.print("Waiting to initialize");
+  DBG("Waiting to initialize");
   while (millis()-initdelay<3000){
-    Serial.print(".");
+    DBG(".");
     unsigned long diff =millis()-initdelay;
     delay(1000);
   }
+#if defined(__AVR_ATmega32U4__)
   //set serials for WiFly -- only for pro micro is Serial1
-  Serial1.begin(9600);   // Start hardware Serial for the RN-XV
-  WiFly.setUart(&Serial1);
-  WiFly.begin();
+  //Serial1.begin(9600);   // Start hardware Serial for the RN-XV
+  wifly.begin(&Serial1,&Serial);
+#else
+  wifly.begin(&Serial);
+#endif
 
-  Serial.print(".");
-  Serial.println("initialized!");
+  DBG(".");
+  DBGL("initialized!");
 }
 int connect2WiFi(){
-  Serial.println("connect2WiFi()");
-  Serial.print("WiFi Association...");
+
+  DBGL("connect2WiFi()");
+  DBG("SSID:");
+  DBGL(ssid);
+  DBG("Passphrase:");
+  DBGL(passphrase);
+  DBG("WiFi Association...");
   // Join the WiFi network
-  while(!WiFly.join(ssid, passphrase, mode)) {
-    Serial.println("failed!");
+  while(!wifly.join(ssid,passphrase)) {
+    DBGL("failed!");
     resetWiFly(WIFLY_PIN);
     // Hang on failure.
     digitalWrite(LED_RED, HIGH);
     delay(2000);
     digitalWrite(LED_RED, LOW);
     delay(2000);
-    //}
-    Serial.print("Attempting again...");
+    DBG("Attempting again...");
   }
-  Serial.println("ok!");
+  DBGL("ok!");
 }
 
 int connect2MQTT(){
-  Serial.println("connect2MQTT()");
-  Serial.print("Connecting to MQTT");
-  client = new PubSubClient("console.sensorflare.com", 1883, callback, wiFlyClient);
-  Serial.print(".");
-  //client = new PubSubClient("150.140.5.11", 1883, callback, wiFlyClient);
+  DBGL("connect2MQTT()");
+  DBG("Connecting to MQTT");
+  client = new PubSubClient("console.sensorflare.com", 1883, callback,&wifly);
+  delay(1000);
+  DBG(".");
   digitalWrite(LED_GREEN,LOW);
   digitalWrite(LED_RED,HIGH);
-  Serial.print(".");
+  DBG(".");
   int retries=0;
   //  if (reconnect){
   wdt_enable(WDTO_8S);
   //  }
-  Serial.print(".");
   while(!client->connect(flare->mac())) {
+    DBG(".");
     wdt_reset();
     retries++;
-    Serial.println("failed!");
+    DBGL("failed!");
     digitalWrite(LED_RED, HIGH);
     delay(1000);
     digitalWrite(LED_RED, LOW);
@@ -73,10 +80,11 @@ int connect2MQTT(){
     delay(1000);
     digitalWrite(LED_RED, LOW);
     delay(1000);
-    Serial.print("Connecting to MQTT...");
+    DBG("Connecting to MQTT...");
   }
+  DBG(".");
   wdt_disable();
-  Serial.println("ok!");
+  DBGL("ok!");
   return retries;
 }
 
@@ -86,7 +94,7 @@ int connect2MQTT(){
 
 void sensors_loop()
 {
-  Serial.println("sensors_loop()");
+  DBGL("sensors_loop()");
 
   flare->check();
 
@@ -95,7 +103,7 @@ void sensors_loop()
   if (millis()-sendmillis>30000){
     sendmillis=millis();
 
-    Serial.println("sensors_send()");
+    DBGL("sensors_send()");
     //    sprintf(sensname,"%s/test",flare->mac());
     //    int val=monitor.calcIrms(1430)*1000;
     //    sprintf(textbuffer,"%d",val);
@@ -126,32 +134,18 @@ void add_sensors() {
   pinMode(A2,INPUT);
   pinMode(A3,INPUT);
 
-  Serial.println("add_sensors()");
-  //  EnergyMonitor  * monitor1 = new EnergyMonitor();
-  //  monitor1->current(A1, 30);      // Current: input pin, calibration.
-  //  monitor1->calcIrms(1480)*1000;  // Calculate Irms only
+  DBGL("add_sensors()");
   CurrentSensor * current1 = new CurrentSensor("cur/1\0",&monitor1);
   flare->registerSensor(current1);
   flare->registerSensor(new WattHourSensor("con/1\0",30,current1));  
 
-
-  //EnergyMonitor  * monitor2 = new EnergyMonitor();
-  //monitor2->current(A2, 30);      // Current: input pin, calibration.
-  //monitor2->calcIrms(1480)*1000;  // Calculate Irms only
   CurrentSensor * current2 = new CurrentSensor("cur/2\0",&monitor2);
   flare->registerSensor(current2);
   flare->registerSensor(new WattHourSensor("con/2\0",30,current2));  
 
-  //pinMode(A3,INPUT);
-  //  EnergyMonitor  * monitor3 = new EnergyMonitor();
-  //  monitor3->current(A3, 30);      // Current: input pin, calibration.
-  //  monitor3->calcIrms(1480)*1000;  // Calculate Irms only
   CurrentSensor * current3 = new CurrentSensor("cur/3\0",&monitor3);
   flare->registerSensor(current3);
   flare->registerSensor(new WattHourSensor("con/3\0",30,current3));  
-
-
-
 }
 
 
@@ -160,17 +154,20 @@ void establishConnection(){
   //RESET WIFLY
   resetWiFly(WIFLY_PIN);
 
-  if (true){
-    //connect to the wifi network
-    connect2WiFi();
+  char wifly_mac[50];
+  wifly.getMAC(wifly_mac, sizeof(wifly_mac));
+  flare->setMac(wifly_mac);
 
-    //get the wifly unique mac address
-    flare->setMac(WiFly.getMAC());
-    //Serial.print("WiFi mac is:");
-    //Serial.println(WiFly.getMAC());
-    //Serial.print("WiFi ip:");
-    //Serial.println(WiFly.ip());
+  //connect to the wifi network
+  connect2WiFi();
+  //get the wifly unique mac address
 
+  //  char wifly_ip[50];
+  //  wifly.getIP(wifly_ip,sizeof(wifly_ip));
+  //  flare->setIP(wifly_ip);
+  //  DBG("WiFi:");
+  //  DBGL(flare->ip());
+  //if (!setup_mode){
     //connect to the mqtt broker
     int retries = connect2MQTT();
 
@@ -179,25 +176,24 @@ void establishConnection(){
     delay(10);
     client->publish("retries",flare->retries(retries));
     delay(10);
+    //  sprintf(textbuffer,"%s",flare->ip());
+    //  client->publish("ip",textbuffer);
+    //  delay(10);
     client->subscribe("heartbeat");
     delay(10);
     client->subscribe(flare->channel());
-  }
-  else{
-    Serial.println("Creating adhoc");
-    if (!WiFly.createAdHocNetwork("wifly")){
-      Serial.println("Failed!");
-    }
-    else{
-      Serial.println("Ready");
-      Serial.println(Serial.println(WiFly.ip()));
-    }
+  //}
+  //else{
 
-    while(true){
-
-    }
-  }
+  //}
 }
+
+
+
+
+
+
+
 
 
 
