@@ -35,6 +35,8 @@ EnergyMonitor monitor3;
 #define LED_GREEN 10
 #define WIFLY_PIN 6
 
+#define WIFLY_SETTINGS_STORED 42
+
 MqttFlare *flare ;
 
 char textbuffer[30];
@@ -47,11 +49,14 @@ PubSubClient *client;
 
 boolean setup_mode=false;
 
+//#define USE_BREATH
+#ifdef USE_BREATH
 #define LED LED_GREEN // any PWM led will do
 unsigned long status_breathe_time = millis();
 boolean breathe_up = true;
 int breathe_i = 15;
 int breathe_delay = 10;
+#endif 
 
 #include "utils.h"
 
@@ -62,38 +67,38 @@ boolean current_line_is_blank = false;
 
 void callback(char* topic, byte* payload, unsigned int length) {
 
-  if (strncmp("heartbeat",topic,9)==0){
-    wdt_reset();
-  }  
-  else{
-    char *newtopic = strchr(topic,'/');
-    newtopic++;
-    if (strcmp("reset",newtopic)==0){
-      wdt_enable(WDTO_2S);
-      while(1){
-      };
-    }
-    else{
-      char response[10];
-      size_t rlength;
-      flare->action(newtopic,(char *)payload,length,response,&rlength);  
-      client->publish(&topic[1],response);
-      //Serial.println(&topic[1]);
-      //Serial.println(response);
-      //delay(10);
-    }
+  //if (strncmp("heartbeat",topic,9)==0){
+  //  wdt_reset();
+  //}  
+  //else{
+  char *newtopic = strchr(topic,'/');
+  newtopic++;
+  if (strcmp("reset",newtopic)==0){
+    wdt_enable(WDTO_2S);
+    while(1){
+    };
   }
+  else{
+    char response[10];
+    size_t rlength;
+    flare->action(newtopic,(char *)payload,length,response,&rlength);  
+    client->publish(&topic[1],response);
+    //Serial.println(&topic[1]);
+    //Serial.println(response);
+    //delay(10);
+  }
+  //}
 }
 
 
 void setup()
 {
 
-  monitor1.current(A1, 30);      // Current: input pin, calibration.
+  monitor1.current(A3, 30);      // Current: input pin, calibration.
   monitor1.calcIrms(1480);  // Calculate Irms only
   monitor2.current(A2, 30);      // Current: input pin, calibration.
   monitor2.calcIrms(1480);  // Calculate Irms only
-  monitor3.current(A3, 30);      // Current: input pin, calibration.
+  monitor3.current(A1, 30);      // Current: input pin, calibration.
   monitor3.calcIrms(1480);  // Calculate Irms only
 
   //EEPROM.write(0,0);  EEPROM.write(1,0);  EEPROM.write(2,0);  EEPROM.write(3,0);
@@ -110,10 +115,22 @@ void setup()
   digitalWrite(LED_GREEN,LOW);
   digitalWrite(LED_RED,HIGH);
 
+  resetWiFly(WIFLY_PIN);
+
   //DEBUG SERIAL
   Serial.begin(9600);   // Start hardware Serial for the RN-XV
 
-  Serial.println("Arduino Reset");
+#if defined(__AVR_ATmega32U4__)
+#warning "is pro micro"
+  Serial1.begin(9600);
+  wifly.begin(&Serial1);
+#else
+#warning "is arduino uno"
+  wifly.begin(&Serial);
+#endif
+
+
+  DBG("Arduino Reset");
 
   establishConnection();
 
@@ -137,10 +154,11 @@ void setup()
   //all set -- change the leds!
   digitalWrite(LED_RED,LOW);
   digitalWrite(LED_GREEN,HIGH);
+#ifdef USE_BREATH
   breathe_up=true;
+#endif
 
-
-  DBGL("Starting Server");
+  Serial.println("Ready!");
 
   //server = new WiFlyServer(80);
   //server->begin();
@@ -150,41 +168,43 @@ void setup()
 
 void loop()
 {
-//  if (setup_mode){
-//    if (wifly.available() > 0) {
-//
-//      /* See if there is a request */
-//      if (wifly.gets(buf, sizeof(buf))) {
-//        if (strncmp_P(buf, PSTR("GET / "), 6) == 0) {
-//          /* GET request */
-//          while (wifly.gets(buf, sizeof(buf)) > 0) {
-//            /* Skip rest of request */
-//          }
-//          sendIndex();
-//        } 
-//        else if (strncmp_P(buf, PSTR("POST /save"), 10) == 0) {
-//          /* Form POST */
-//          char args[70];
-//
-//          /* Get posted field value */
-//          if (wifly.match(F("ssid="))) {
-//            wifly.gets(args, sizeof(args));
-//          }
-//          wifly.flushRx();		// discard rest of input
-//          //sendGreeting(args);
-//        }
-//      }
-//    }
-//    wdt_reset();
-//  }
-//  else{
+  if (setup_mode){
+    if (wifly.available() > 0) {
+
+      /* See if there is a request */
+      if (wifly.gets(buf, sizeof(buf))) {
+        if (strncmp_P(buf, PSTR("GET / "), 6) == 0) {
+          /* GET request */
+          while (wifly.gets(buf, sizeof(buf)) > 0) {
+            /* Skip rest of request */
+          }
+          sendIndex();
+        } 
+        else
+          if (strncmp_P(buf, PSTR("POST /save"), 10) == 0) {
+            /* Form POST */
+            char args[70];
+
+            /* Get posted field value */
+            if (wifly.match(F("ssid="))) {
+              wifly.gets(args, sizeof(args));
+            }
+            wifly.flushRx();		// discard rest of input
+            sendGreeting(args);
+          }
+      }
+    }
+    //wdt_reset();
+  }
+  else{
     //nonBlockingBreathe();
 
     static unsigned long timestamp = 0;
     if(!client->loop()) {
       DBGL("Client Disconnected.");
+#ifdef USE_BREATH
       breathe_up=false;
-
+#endif
       digitalWrite(LED_RED, HIGH);
       delay(1000);
       digitalWrite(LED_RED, LOW);
@@ -200,8 +220,9 @@ void loop()
       //all set again -- change the leds!
       digitalWrite(LED_RED,LOW);
       digitalWrite(LED_GREEN,HIGH);
+#ifdef USE_BREATH
       breathe_up=true;
-
+#endif
 
     }
     else{
@@ -210,9 +231,10 @@ void loop()
         sensors_loop();
       }
     }
-//  }
+  }
 }
 
+#ifdef USE_BREATH
 void nonBlockingBreathe(){
 
   if( (status_breathe_time + breathe_delay) < millis() ){
@@ -275,6 +297,7 @@ void nonBlockingBreathe(){
     }
   }
 }
+#endif
 
 
 
@@ -289,57 +312,64 @@ void nonBlockingBreathe(){
 //
 //
 //
-//void sendIndex()
-//{
-//  /* Send the header direclty with print */
-//  wifly.println(F("HTTP/1.1 200 OK"));
-//  wifly.println(F("Content-Type: text/html"));
-//  wifly.println(F("Transfer-Encoding: chunked"));
-//  wifly.println();
-//
-//
-//  wifly.sendChunkln("<form name=\"input\" action='/save' method='post'><table><tr><td>SSID<td><input type=\"text\" name=\"ssid\"><tr><td>Passphrase<td><input type=\"password\" name=\"passphrase\"><tr><td colspan=2><input type=\"submit\" value=\"Submit\"></table></form>");
-//  wifly.sendChunkln();
-//}
-//
-//
-///** Send a greeting HTML page with the user's name and an analog reading */
-//void sendGreeting(char *args)
-//{
-//  /* Send the header directly with print */
-//  wifly.println(F("HTTP/1.1 200 OK"));
-//  wifly.println(F("Content-Type: text/html"));
-//  wifly.println(F("Transfer-Encoding: chunked"));
-//  wifly.println();
-//
-//  char text[10];
-//  sprintf(text,"%d",EEPROM.read(200));
-//  char *ssid = strtok(args,"&");
-//  char *rest = strtok(NULL,"&");
-//  strtok(rest,"=");
-//  char *phrase = strtok(NULL,"=");
-//
-//EEPROM.write(200,42);
-//EEPROM.write(300,strlen(ssid));
-//for (int i=0;i<strlen(ssid);i++){
-//EEPROM.write(301+i,ssid[i]);
-//}
-//EEPROM.write(400,strlen(phrase));
-//for (int i=0;i<strlen(phrase);i++){
-//EEPROM.write(401+i,phrase[i]);
-//}
-//
-//  wifly.sendChunk("Stored ");
-//  wifly.sendChunk("SSID '");
-//  wifly.sendChunk(ssid);
-//  wifly.sendChunk("' and passphrase '");
-//  wifly.sendChunk(phrase);
-//  wifly.sendChunk("'");
-//  wifly.sendChunkln();
-//  
-//  
-//  wdt_enable(WDTO_2S);
-//  while(1){
-//  };
-//}
+void sendIndex()
+{
+  /* Send the header direclty with print */
+  wifly.println(F("HTTP/1.1 200 OK"));
+  wifly.println(F("Content-Type: text/html"));
+  wifly.println(F("Transfer-Encoding: chunked"));
+  wifly.println();
+  wifly.sendChunkln(F("<form action='/save' method='post'><table>"));
+  wifly.sendChunkln(F("<tr><td>SSID<td><input type='text' name='ssid'>"));
+  wifly.sendChunkln(F("<tr><td>Phase<td><input type='text' name='passphrase'>"));
+  wifly.sendChunkln(F("<tr><td><input type='submit' value='Save'>"));
+  wifly.sendChunkln(F("</table></form>"));
+
+  //wifly.sendChunkln("<form action='/save' method='post'><table><tr><td>SSID<td><input type='text' name='ssid'><tr><td>Phase<td><input type='text' name='passphrase'><tr><td><input type='submit' value='Save'></table></form>");
+
+  //wifly.sendChunkln("<form action='/save' method='post'>SSID<input type='text' name='ssid'>Phase<input type='text' name='passphrase'><input type='submit' value='Save'>");
+  wifly.sendChunkln();
+}
+
+
+/** Send a greeting HTML page with the user's name and an analog reading */
+void sendGreeting(char *args)
+{
+  /* Send the header directly with print */
+  wifly.println(F("HTTP/1.1 200 OK"));
+  wifly.println(F("Content-Type: text/html"));
+  wifly.println(F("Transfer-Encoding: chunked"));
+  wifly.println();
+
+  char *ssid = strtok(args,"&");
+  char *rest = strtok(NULL,"&");
+  strtok(rest,"=");
+  char *phrase = strtok(NULL,"=");
+
+  EEPROM.write(200,WIFLY_SETTINGS_STORED);
+  EEPROM.write(300,strlen(ssid));
+  for (int i=0;i<strlen(ssid);i++){
+    EEPROM.write(301+i,ssid[i]);
+  }
+  EEPROM.write(400,strlen(phrase));
+  for (int i=0;i<strlen(phrase);i++){
+    EEPROM.write(401+i,phrase[i]);
+  }
+
+  wifly.sendChunk(F("Stored!"));
+  wifly.sendChunkln();
+
+  wdt_enable(WDTO_2S);
+  while(1){
+  };
+}
+
+
+
+
+
+
+
+
+
 

@@ -23,9 +23,15 @@ public :
 
     sprintf(_channel, "s%s/#",_mac);
   }
-  
+  void setIP(char * wifly_ip){
+    sprintf(_ip, "%s,%s",_mac,wifly_ip);
+  }
+
   char * mac(){
     return _mac;
+  }    
+  char * ip(){
+    return _ip;
   }  
   char * channel(){
     return _channel;
@@ -59,9 +65,9 @@ public :
     for (int i=0;i<_scount;i++){
       if (strcmp ( sensors[i]->get_name() , name ) == 0 ){
 
-    size_t len1;
-    sensors[i]->set_value((uint8_t *)message,len,(uint8_t *)resp,&len1);
-    char sensname[30];
+        size_t len1;
+        sensors[i]->set_value((uint8_t *)message,len,(uint8_t *)resp,&len1);
+        char sensname[30];
 
 
       }
@@ -69,6 +75,7 @@ public :
   }
 
 private :
+  char _ip[50];				//wifly mac address
   char _mac[20];				//wifly mac address
   char _channel[30];		//topic to subscribe to (s + mac)
   char textbuffer[20];
@@ -80,6 +87,7 @@ private :
 };
 
 #endif
+
 
 
 
