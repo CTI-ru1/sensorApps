@@ -18,9 +18,8 @@ public:
   };
 
   void setTestbedID(char* testbedID);
-  void setUberdustServer(byte * uberdustServer);
   void connect( void callback(char*, uint8_t*, unsigned int));
-  void loop();
+  boolean loop();
 
   //  void publish(char * message);
   void publish(uint16_t address, uint8_t * message,uint8_t length);
@@ -37,7 +36,6 @@ protected:
 private:
   char testbedID[17];
   long lastPong;
-  byte * uberdustServer;
   char _message_bus[50];
   char firstConnect[50];
   int _message_bus_count;

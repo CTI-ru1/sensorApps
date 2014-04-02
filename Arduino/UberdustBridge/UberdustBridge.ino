@@ -8,10 +8,14 @@
 
 //Operational Parameters
 #define USE_TREE_ROUTING
-#define CHANNEL 13
+#define CHANNEL 12
 #include <EEPROM.h>
 //Leds
+#define LED_RED 2
+#define LED_GREEN 6
 #include "LedUtils.h"
+
+#define MAC_EEPROM_OFFSET 500
 
 //Software Reset, Remote Reset
 #include <avr/wdt.h>
@@ -45,20 +49,18 @@ EthernetClient ethernetClient ;
 UberdustGateway gateway(&ethernetClient);
 
 //Update these with values suitable for your network/broker.
-byte mac[] = {  
-  0xAE, 0xED, 0xBA, 0xFc, 0xaa, 0xab};
+static byte mac[] = { 
+  0x06, 0x01, 0x01, 0x00, 0x00, 0x00 };
 
-byte uberdustServer[] ={  
-  150, 140, 5, 20};
 
 // Address of the XBee
 char address[5];
 // Indicator of XBee communication
 bool receivedAny;
 // Indicator of MQTT communication
-int lastReceivedStatus;
+//int lastReceivedStatus;
 // Timestamp of the last MQTT message received
-unsigned long lastReceived;
+//unsigned long lastReceived;
 
 /**
  * Callaback to the MQTT connection.
@@ -84,7 +86,7 @@ void check_heartbeat(char* topic, byte* payload, unsigned int length)
   if (strcmp(topic, "heartbeat") == 0){
     if (strncmp((char *)payload, "reset",5)==0){
       wdt_reset();
-      blinkFast(6);
+      blinkFast(2);
     }
   }
   else{
@@ -114,7 +116,7 @@ void check_reset(char* topic, byte* payload, unsigned int length)
 void check_xbee(char* topic, byte* payload, unsigned int length)
 {
   blinkFast(2);
-  radio->send( *((uint16_t*)payload) , &(payload[2]),length-2);
+  routing->send( *((uint16_t*)payload) , &(payload[2]),length-2);
 }
 
 /**
@@ -141,10 +143,17 @@ void radio_callback(uint16_t sender, byte* payload, unsigned int length) {
  */
 void setup()
 {
-  pinMode(6, OUTPUT);
-  pinMode(2, OUTPUT);
+
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
   bootblink();
   ledState(STATE_BOOT);
+
+  int sensorValue = analogRead(A5);
+  randomSeed(sensorValue);
+  getMacAddress(mac);
+
+
   //for (int i=0;i<2;i++){
   //  mac[i]=EEPROM.read(i+17-2);
   //}
@@ -168,7 +177,6 @@ void setup()
     wdt_reset();
     //Connect to MQTT broker
     ledState(STATE_ETH);
-    gateway.setUberdustServer(uberdustServer);
 
     //create the unique id based on the xbee mac address
     char testbedHash[17];
@@ -199,8 +207,8 @@ void setup()
       Serial.begin(9600);
       Serial.println("Connecting to xbee");
       Serial.end();
-      
-      
+
+
       connectXbee();
 
       uint32_t addr64h = xbee.getMyAddress64High();
@@ -233,17 +241,14 @@ void setup()
       gateway.connect(callback);
       gateway.publish("connect","xbee-connected2");
     }
-
-
-
   }
 
   wdt_reset();
   wdt_disable();
 
   //Initialize variables
-  lastReceivedStatus = false;
-  lastReceived = millis();
+  //lastReceivedStatus = false;
+  //lastReceived = millis();
   receivedAny = false;
   wdt_enable(WDTO_8S);
 }
@@ -267,19 +272,23 @@ void loop()
   //    ledState(0);
   //  }
   //Check MQTT messages
-  gateway.loop();
+  if (gateway.loop()){
+    nonBlockingBreathe(LED_GREEN);
+  }else{
+    watchdogReset();
+  }
   routing->loop();
 
   //Blink on network traffic
-  if (millis() - lastReceived > 5000)
-  {
-    if (receivedAny)
-    {
-      lastReceivedStatus = !lastReceivedStatus;
-      receivedAny = false;
-    }
-    lastReceived = millis();
-  }
+  //  if (millis() - lastReceived > 5000)
+  //  {
+  //    if (receivedAny)
+  //    {
+  //      lastReceivedStatus = !lastReceivedStatus;
+  //      receivedAny = false;
+  //    }
+  //    lastReceived = millis();
+  //  }
 }
 
 /**
@@ -306,12 +315,12 @@ void ledState(int theStatus)
   else if (theStatus == 1)
   {
     digitalWrite(6, HIGH);
-    digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
+    digitalWrite(2, LOW);
   }
   else if (theStatus == 0)
   {
     digitalWrite(6, LOW);
-    digitalWrite(2, lastReceivedStatus ? HIGH : LOW);
+    digitalWrite(2, LOW);
   }
 }
 
@@ -337,13 +346,13 @@ void connectXbee(){
   ledState(STATE_XBEE);
 
   //Setup radio using the xbee
-  lastReceivedStatus = false;
+  //lastReceivedStatus = false;
 #ifdef USE_TREE_ROUTING
-  radio = new TreeRouting(&xbee);
+  routing = new TreeRouting(&xbee);
 #else 
-  radio = new NonRouting(&xbee);
+  routing = new NonRouting(&xbee);
 #endif 
-  radio->set_sink(true);
+  routing->set_sink(true);
   wdt_reset();
 
   uint16_t address = xbee.getMyAddress(); //fix 4hex digit address
@@ -352,8 +361,8 @@ void connectXbee(){
   uint8_t lbyte = bit[0];
   bit[0] = mbyte;
   bit[1] = lbyte;
-  radio->set_my_address(address);
-  radio->set_message_received_callback(radio_callback);
+  routing->set_my_address(address);
+  routing->set_message_received_callback(radio_callback);
   wdt_reset();
 
 
@@ -362,3 +371,27 @@ void connectXbee(){
   mac[4] = (&my_address)[1];
   mac[5] = (&my_address)[0];
 }
+
+
+
+// This function takes a 6 byte array, and will fill every byte that is 0x00 with device unique data.
+// The data is retrieved from a preset place in the Atmega EEPROM.
+// If the particular EEPROM bytes are 0x00 or 0xFF, the data is ranomly generated and stored in EEPROM.
+
+void getMacAddress(byte* macAddr) {
+  int eepromOffset = MAC_EEPROM_OFFSET;
+  int b = 0; 
+  for (int c = 0; c < 6; c++) {
+    b = 0;
+    if(macAddr[c] == 0) {
+      b = EEPROM.read(eepromOffset + c);
+      if(b == 0 || b == 255) {
+        b = random(0, 255);
+        EEPROM.write(eepromOffset + c, b);
+      }
+      macAddr[c] = b;
+    }
+  }
+}
+
+

@@ -3,12 +3,9 @@
 void UberdustGateway::setTestbedID(char* testbedID){
   strcpy(this->testbedID,testbedID);
 }
-void UberdustGateway::setUberdustServer(byte * uberdustServer){
-  this->uberdustServer = uberdustServer;  
-}
 
 void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
-  mqttClient= new PubSubClient(uberdustServer, 1883, callback, *ethernetClient) ;
+  mqttClient= new PubSubClient("console.sensorflare.com", 1883, callback, *ethernetClient) ;
 
   _message_bus_count= sprintf(_message_bus,"%s",testbedID);
 
@@ -32,12 +29,12 @@ void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
   }
 }
 
-void UberdustGateway::loop(){
+boolean UberdustGateway::loop(){
   if (millis()-lastPong>10000){
     pongServer();
     lastPong=millis();
   }
-  mqttClient->loop();
+  return mqttClient->loop();
 }
 
 void UberdustGateway::publish(uint16_t address, uint8_t * message,uint8_t length){
