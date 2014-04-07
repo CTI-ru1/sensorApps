@@ -11,22 +11,26 @@ void resetWiFly(int pin){
   digitalWrite(pin,HIGH);
 
   //give some time to the wifly to start-up
-  unsigned long initdelay = millis();
-  while (millis()-initdelay<500){
-    DBG(".");
-    unsigned long diff =millis()-initdelay;
-    delay(100);
-  }
+  //  unsigned long initdelay = millis();
+  //  while (millis()-initdelay<500){
+  //    DBG(".");
+  //    unsigned long diff =millis()-initdelay;
+  //    delay(100);
+  //  }
 
   DBG(".");
   DBGL("ok!");
 }
 int connect2WiFi(){
 
-  if (EEPROM.read(200)!=WIFLY_SETTINGS_STORED){
+  int wifly_status  = EEPROM.read(WIFLY_STATUS_POS);
+
+  //Serial.println(wifly_status);
+  //if ((EEPROM.read(200)!=WIFLY_SETTINGS_STORED) || (wifly_status==1)){
+  if (wifly_status==1){
     DBGL(F("setup_mode"));
     strcpy(ssid,"wifly");
-    strcpy(passphrase,"");
+    strcpy(p,"");
     setup_mode=true;
   }
   else{
@@ -37,9 +41,9 @@ int connect2WiFi(){
     ssid[ssid_len]='\0';
     int phrase_len= EEPROM.read(400);
     for (int i=0;i<phrase_len;i++){
-      passphrase[i]=EEPROM.read(401+i);
+      p[i]=EEPROM.read(401+i);
     }
-    passphrase[phrase_len]='\0';
+    p[phrase_len]='\0';
   }
 
   DBGL("connect2WiFi()");
@@ -49,29 +53,48 @@ int connect2WiFi(){
     if (retries>0){
       DBGL(F("failed!"));
       // Hang on failure.
-      digitalWrite(LED_RED, HIGH);
-      delay(200);
-      digitalWrite(LED_RED, LOW);
-      delay(200);
-      digitalWrite(LED_RED, HIGH);
+      //blinkFast(LED_RED);
     }
     else{
       DBG(F("S:"));
       DBGL(ssid);
       DBG(F("P:"));
-      DBGL(passphrase);
+      DBGL(p);
     }
 
     delay(1000);
     retries++;
-    if (retries>4){
+    if (retries>MAX_RETRIES||strcmp(ssid,"")==0){
+      --wifly_status;
+      if (wifly_status==0){
+        wifly_status=5;
+      }
+      EEPROM.write(WIFLY_STATUS_POS,wifly_status);
       wdt_enable(WDTO_2S);
       while(1);
     }
     DBG(F("WiFi Association..."));
+    wifly.setSSID(ssid);
+    wifly.setPassphrase(p);
+    wifly.enableDHCP();
+    wifly.save();
   }
-  while(!wifly.join(ssid,passphrase));
+  while(!wifly.join());
+  wifly.setProtocol(WIFLY_PROTOCOL_TCP);
+  if (wifly.getPort() != 80) {
+    wifly.setPort(80);
+    /* local port does not take effect until the WiFly has rebooted (2.32) */
+    wifly.save();
+    //Serial.println(F("Set port to 80, rebooting to make it work"));
+    wifly.reboot();
+    delay(3000);
+  }
   DBGL(F("ok!"));
+  if (setup_mode){
+  }
+  else{
+    EEPROM.write(WIFLY_STATUS_POS,5);
+  }
 
   //  if (setup_mode){
   //      wifly.setProtocol(WIFLY_PROTOCOL_TCP);
@@ -99,18 +122,11 @@ int connect2MQTT(){
     wdt_reset();
     if (retries>0){
       DBGL("failed!");
-      digitalWrite(LED_RED, HIGH);
-      delay(100);
-      digitalWrite(LED_RED, LOW);
-      delay(100);
-      digitalWrite(LED_RED, HIGH);
-      delay(100);
-      digitalWrite(LED_RED, LOW);
-      delay(100);
+      //blinkSlow(LED_RED);
       DBG("Connecting to MQTT...");
     }
     retries++;
-    if (retries>4){
+    if (retries>MAX_RETRIES){
       wdt_enable(WDTO_2S);
       while(1);
     }
@@ -132,6 +148,12 @@ void sensors_loop()
 
   if (millis()-sendmillis>30000){
     sendmillis=millis();
+    if (!received){
+      digitalWrite(LED_RED,HIGH);
+      while(1){
+      }
+    }
+    received=false;
 
     DBGL("sensors_send()");
     //    sprintf(sensname,"%s/test",flare->mac());
@@ -140,14 +162,15 @@ void sensors_loop()
     //    client->publish(sensname,textbuffer);
 
 
-    client->publish(str_connect,flare->connect(0));
+    //client->publish("connect",flare->connect(0));
     //broadcast readings
     for (int i=0;i<flare->scount();i++){
       sprintf(sensname,"%s/%s",flare->mac(),flare->sensor(i)->get_name());
       //sprintf(textbuffer,"%d",rand());
       size_t len = 0;
-      flare->sensor(i)->get_value((uint8_t*)textbuffer,&len);
-      client->publish(sensname,textbuffer);
+      char response[10];
+      flare->sensor(i)->get_value((uint8_t*)response,&len);
+      client->publish(sensname,response);
       delay(10);
     }
   }
@@ -155,16 +178,12 @@ void sensors_loop()
 
 
 void add_sensors() {
-  //flare->registerSensor(new InvertedZoneSensor("r/1\0",2));  //2  
-  //flare->registerSensor(new InvertedZoneSensor("r/2\0",3));  //3
-  //flare->registerSensor(new InvertedZoneSensor("r/3\0",4));  //4  
-  //  flare->registerSensor(new InvertedZoneSensor("r/4\0",5));  //5
+  flare->registerSensor(new InvertedZoneSensor("r/1\0",2));  //2  
+  flare->registerSensor(new InvertedZoneSensor("r/2\0",3));  //3
+  flare->registerSensor(new InvertedZoneSensor("r/3\0",4));  //4  
+  flare->registerSensor(new InvertedZoneSensor("r/4\0",5));  //5
 
-  pinMode(A1,INPUT);
-  pinMode(A2,INPUT);
-  pinMode(A3,INPUT);
-
-  DBGL("add_sensors()");
+    DBGL("add_sensors()");
   CurrentSensor * current1 = new CurrentSensor("cur/1\0",&monitor1);
   flare->registerSensor(current1);
   //flare->registerSensor(new WattHourSensor("con/1\0",30,current1));  
@@ -183,9 +202,8 @@ void add_sensors() {
 void establishConnection(){
 
   //get the wifly unique mac address
-  char wifly_mac[50];
-  wifly.getMAC(wifly_mac, sizeof(wifly_mac));
-  flare->setMac(wifly_mac);
+  wifly.getMAC(textbuffer, sizeof(textbuffer));
+  flare->setMac(textbuffer);
 
   //connect to the wifi network
   connect2WiFi();
@@ -204,8 +222,8 @@ void establishConnection(){
     connect2MQTT();
 
     //publish and subscribe
-    client->publish(str_connect,flare->connect(1));
-    delay(10);
+    client->publish("c",textbuffer);
+    //delay(10);
     //client->publish(str_retries,flare->retries(retries));
     //delay(10);
 #ifdef SEND_IP
@@ -213,14 +231,23 @@ void establishConnection(){
     client->publish(str_ip,textbuffer);
     delay(10);
 #endif
-    //client->subscribe("heartbeat");
-    //delay(10);
+    client->subscribe("heartbeat");
+    delay(10);
     client->subscribe(flare->channel());
   }
   //else{
 
   //}
 }
+
+
+
+
+
+
+
+
+
 
 
 
