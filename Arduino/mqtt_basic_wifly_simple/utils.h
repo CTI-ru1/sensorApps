@@ -23,18 +23,18 @@ void resetWiFly(int pin){
 }
 int connect2WiFi(){
 
-  int wifly_status  = EEPROM.read(WIFLY_STATUS_POS);
+  int wifly_status = EEPROM.read(WIFLY_STATUS_POS);
+  int ssid_len= EEPROM.read(300);
 
   //Serial.println(wifly_status);
   //if ((EEPROM.read(200)!=WIFLY_SETTINGS_STORED) || (wifly_status==1)){
-  if (wifly_status==1){
+  if (wifly_status==1||wifly_status==255||!ssid_len){
     DBGL(F("setup_mode"));
     strcpy(ssid,"wifly");
     strcpy(p,"");
     setup_mode=true;
   }
   else{
-    int ssid_len= EEPROM.read(300);
     for (int i=0;i<ssid_len;i++){
       ssid[i]=EEPROM.read(301+i);
     }
@@ -47,39 +47,34 @@ int connect2WiFi(){
   }
 
   DBGL("connect2WiFi()");
-  int retries = 0;
   // Join the WiFi network
-  do{
-    if (retries>0){
-      DBGL(F("failed!"));
-      // Hang on failure.
-      //blinkFast(LED_RED);
-    }
-    else{
-      DBG(F("S:"));
-      DBGL(ssid);
-      DBG(F("P:"));
-      DBGL(p);
-    }
+  //  DBG(F("S:"));
+  //Serial.println(ssid);
+  //  DBG(F("P:"));
+  //Serial.println(p);
 
-    delay(1000);
-    retries++;
-    if (retries>MAX_RETRIES||strcmp(ssid,"")==0){
-      --wifly_status;
-      if (wifly_status==0){
-        wifly_status=5;
-      }
-      EEPROM.write(WIFLY_STATUS_POS,wifly_status);
-      wdt_enable(WDTO_2S);
-      while(1);
-    }
-    DBG(F("WiFi Association..."));
-    wifly.setSSID(ssid);
-    wifly.setPassphrase(p);
-    wifly.enableDHCP();
-    wifly.save();
+
+  --wifly_status;
+  if (wifly_status==0){
+    wifly_status=2;
   }
-  while(!wifly.join());
+  EEPROM.write(WIFLY_STATUS_POS,wifly_status);
+
+  DBG(F("WiFi Association..."));
+  wifly.setSSID(ssid);
+  wifly.setPassphrase(p);
+  wifly.enableDHCP();
+  wifly.save();
+
+  //  delay(1000);
+  wdt_reset();
+  if(!wifly.join()){
+    wdt_enable(WDTO_8S);
+    while(1){
+      blinkFast(LED_RED);
+      delay(1000);
+    }
+  }
   wifly.setProtocol(WIFLY_PROTOCOL_TCP);
   if (wifly.getPort() != 80) {
     wifly.setPort(80);
@@ -87,13 +82,14 @@ int connect2WiFi(){
     wifly.save();
     //Serial.println(F("Set port to 80, rebooting to make it work"));
     wifly.reboot();
+    wdt_reset();
     delay(3000);
   }
   DBGL(F("ok!"));
   if (setup_mode){
   }
   else{
-    EEPROM.write(WIFLY_STATUS_POS,5);
+    EEPROM.write(WIFLY_STATUS_POS,3);
   }
 
   //  if (setup_mode){
@@ -108,6 +104,8 @@ int connect2WiFi(){
 int connect2MQTT(){
   DBG("connect2MQTT()");
   client = new PubSubClient("console.sensorflare.com", 1883, callback,&wifly);
+  wdt_reset();
+
   //client = new PubSubClient("150.140.5.11", 1883, callback,&wifly);
   delay(1000);
   DBG(".");
@@ -133,7 +131,7 @@ int connect2MQTT(){
   }
   while (!client->connect(flare->mac()));
   DBG(".");
-  wdt_disable();
+  wdt_reset();
   DBGL("ok!");
   return retries;
 }
@@ -183,18 +181,18 @@ void add_sensors() {
   flare->registerSensor(new InvertedZoneSensor("r/3\0",4));  //4  
   flare->registerSensor(new InvertedZoneSensor("r/4\0",5));  //5
 
-    DBGL("add_sensors()");
-  CurrentSensor * current1 = new CurrentSensor("cur/1\0",&monitor1);
-  flare->registerSensor(current1);
-  //flare->registerSensor(new WattHourSensor("con/1\0",30,current1));  
-
-  CurrentSensor * current2 = new CurrentSensor("cur/2\0",&monitor2);
-  flare->registerSensor(current2);
-  //flare->registerSensor(new WattHourSensor("con/2\0",30,current2));  
-
-  CurrentSensor * current3 = new CurrentSensor("cur/3\0",&monitor3);
-  flare->registerSensor(current3);
-  //flare->registerSensor(new WattHourSensor("con/3\0",30,current3));  
+    //    DBGL("add_sensors()");
+  //  CurrentSensor * current1 = ;
+  flare->registerSensor(new CurrentSensor("cur/1\0",&monitor1));
+  //  //flare->registerSensor(new WattHourSensor("con/1\0",30,current1));  
+  //
+  //  CurrentSensor * current2 = new CurrentSensor("cur/2\0",&monitor2);
+  flare->registerSensor(new CurrentSensor("cur/2\0",&monitor2));
+  //  //flare->registerSensor(new WattHourSensor("con/2\0",30,current2));  
+  //
+  //  CurrentSensor * current3 = new CurrentSensor("cur/3\0",&monitor3);
+  flare->registerSensor(new CurrentSensor("cur/3\0",&monitor3));
+  //  //flare->registerSensor(new WattHourSensor("con/3\0",30,current3));  
 }
 
 
@@ -203,10 +201,13 @@ void establishConnection(){
 
   //get the wifly unique mac address
   wifly.getMAC(textbuffer, sizeof(textbuffer));
+  wdt_reset();
   flare->setMac(textbuffer);
 
   //connect to the wifi network
   connect2WiFi();
+  wdt_reset();
+  wdt_enable(WDTO_8S);
 
   if(!setup_mode){
 #ifdef SEND_IP
@@ -239,6 +240,14 @@ void establishConnection(){
 
   //}
 }
+
+
+
+
+
+
+
+
 
 
 

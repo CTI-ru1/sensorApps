@@ -136,8 +136,8 @@ void setup()
 
 
   DBG("Arduino Reset");
-
   establishConnection();
+  wdt_reset();
 
   DBG("Started in ");
   DBG(millis());
@@ -161,7 +161,6 @@ void setup()
 #ifdef USE_BREATH
   breathe_up=true;
 #endif
-  wdt_enable(WDTO_8S);
   //Serial.println("Ready!");
 }
 
@@ -198,7 +197,7 @@ void loop()
         }
       }
     }
-    //wdt_reset();
+    wdt_reset();
   }
   else{
     //nonBlockingBreathe();
@@ -337,6 +336,7 @@ void send404()
   wifly.println(F("HTTP/1.1 404 Not Found"));
   wifly.println();
 }
+
 
 
 
