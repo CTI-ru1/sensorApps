@@ -1,7 +1,6 @@
 #include "MqttFlare.h"
 
-prog_char string_0[] PROGMEM = "s=150.140.5.11&p=1883&u=0000000000000001&i=0&n=255.255.0.0&g=192.168.1.1&";
-prog_char string_1[] PROGMEM = "HTTP/1.1 200 OK\nConnection: close\n\n<html><body><center><p>Stored!<br><a href='/'>Go Back</a></p></center></body></html>";
+prog_char string_1[] PROGMEM = "HTTP/1.1 200 OK\nConnection: close\n\n<html><body><center><p>Saved!<br><a href='/'>Go Back</a></p></center></body></html>";
 prog_char string_2[] PROGMEM = "HTTP/1.1 200 OK\nConnection: close\n\n<html><link href=\"http://tinyurl.com/pw33vc2\" rel=\"stylesheet\"><body><div class='container'><form method='get' action='save'>MQTT Broker<input type='text' class='form-control' name='s' value='";
 void MqttFlare::action(char * name ,char * message , size_t len){
   for (int i=0;i<scount;i++){
@@ -42,7 +41,13 @@ void MqttFlare::registerSensor(CoapSensor * sensor){
 
 boolean MqttFlare::loop(){
 
-  pubsubclient->loop();
+  boolean loopres = pubsubclient->loop();
+  if (!loopres){
+    wdt_enable(WDTO_2S);
+    while(1){
+    }
+    return false;
+  }
 
   for (int i=0;i<scount;i++){
     sensors[i]->check();
@@ -53,7 +58,7 @@ boolean MqttFlare::loop(){
 
   if (millis()-sendmillis>30000){
     sendmillis=millis();
-
+    Serial.println("pushing to server...");
     //send connect 0
     sprintf(textbuffer,"0-%s",testbedHash);
     pubsubclient->publish("connect",textbuffer);
@@ -68,9 +73,9 @@ boolean MqttFlare::loop(){
     }
   }
 #ifdef ETH_CONF
-
   checkEthernet();
 #endif
+  return true;
 }
 
 
@@ -79,50 +84,51 @@ void MqttFlare::initFromProgmem(){
   byte isSet = EEPROM.read(0);
 
   if (isSet==42){
-    //Serial.println("Reading Connection information...");
-    int index = 4;
-    String current = "";
-    int argIndex=0;
-    while(index<1024){
-      char c = EEPROM.read(index);
-      if (c=='&'){
-        switch(argIndex){
-        case 0:
-          sprintf(server,"%s",current.c_str());
-          break;
-        case 1:
-          port = current.toInt();
-          break;
-        case 2:
-          sprintf(testbedHash,"%s",current.c_str());
-          break;
-        case 3:
-          sprintf(static_ip,"%s",current.c_str());
-          break;
-          //        case 4:
-          //          sprintf(netmask,"%s",current.c_str());
-          //          break;
-          //        case 4:
-          //          sprintf(gateway,"%s",current.c_str());
-          //          break;
-
-        }
-        current="";
-        index+=3;
-        argIndex++;
-      }
-      else{
-        current+=c;
-        index++;
-      }
+    int server_len = EEPROM.read(1);
+    for (int i=1;i<=server_len;i++){
+      server[i-1]=EEPROM.read(1+i);
     }
+    server[server_len]='\0';
+    int port_len = EEPROM.read(100);
+    String current = "";
+    for (int i=1;i<=port_len;i++){
+      current+=EEPROM.read(100+i);
+    }
+    int testbedHash_len = EEPROM.read(200);
+    for (int i=1;i<=testbedHash_len;i++){
+      testbedHash[i-1]=EEPROM.read(200+i);
+    }
+    testbedHash[testbedHash_len]='\0';
+    int staticIp_len = EEPROM.read(300);
+    for (int i=1;i<=staticIp_len;i++){
+      static_ip[i-1]=EEPROM.read(300+i);
+    }
+    static_ip[staticIp_len]='\0';
+
   }  
   else{
     //Serial.println("Saving Default Settings...");
     EEPROM.write(0,42);
-    EEPROM.write(1,1);
-    for (int i=0;i<73;i++){
-      EEPROM.write(2+i,pgm_read_byte_near(string_0+i));
+    int server_len = strlen(server);
+    EEPROM.write(1, server_len);
+    for (int i=1;i<=server_len;i++){
+      EEPROM.write(1+i,server[i-1]);
+    }
+    char port_str[10];
+    int port_len = sprintf(port_str,"%d",port);
+    EEPROM.write(100,port_len);
+    for (int i=1;i<=port_len;i++){
+      EEPROM.write(100+i,port_str[i-1]);
+    }
+    int testbedHash_len = strlen(testbedHash);
+    EEPROM.write(200,testbedHash_len);
+    for (int i=1;i<=testbedHash_len;i++){
+      EEPROM.write(200+i,testbedHash[i-1]);
+    }
+    int staticIp_len = strlen(static_ip);
+    EEPROM.write(300,staticIp_len);
+    for (int i=1;i<=staticIp_len;i++){
+      EEPROM.write(300+i,static_ip[i-1]);
     }
   }
 
@@ -138,12 +144,12 @@ void MqttFlare::checkEthernet(){
     //Serial.println("new client");
     // an http request ends with a blank line
     boolean currentLineIsBlank = true;
-    char request[90];
+    char request[250];
     int index =0 ;
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        if (index<90){
+        if (index<250){
           request[index++]=c;
         }
 
@@ -158,13 +164,17 @@ void MqttFlare::checkEthernet(){
           }
           //client.println("<html><link href=\"http://tinyurl.com/pw33vc2\" rel=\"stylesheet\"><body><div class='container'><form method='get' action='save'>MQTT Broker<input type='text' class='form-control' name='s' value='");
           client.print(server);
-          client.println("'/><br/>Broker Port<input type='text' class='form-control' name='p' value='");
+          client.println("'/><br/>");
+          client.println("Port<input type='text' class='form-control' name='p' value='");
           client.print(port);
-          client.println("'/><br/>Device ID<input type='text' class='form-control' name='u' value='");
+          client.println("'/><br/>ID<input type='text' class='form-control' name='u' value='");
           client.print(testbedHash);
           client.println("'/><br/>IP (0 for DHCP)<input type='text' class='form-control' name='i' value='");
           client.print(static_ip);
           client.println("'/><br/>");
+          client.println(millis()/1000/60);
+          client.flush();
+
           //          client.print("Netmask <input type='text' class='form-control' name='n' value='");
           //          client.print(netmask);
           //          client.println("'/>");
@@ -172,33 +182,59 @@ void MqttFlare::checkEthernet(){
           //          client.print(gateway);
           //          client.println("'/>");
           client.println("<input type='hidden' name='h' value='a'/><input type='submit' class='btn btn-primary' value='Save and Restart'></form></div></body></html>");
+
           index = 0;    // finished with request, empty string
           break;
+
         }
         if (c == '\n') {
+
           // you're starting a new line
           currentLineIsBlank = true;
           //Serial.println(request);
           //Serial.println(request.indexOf("/save"));
-          if (request[5]=='s' && request[6]=='a' && request[7]=='v' && request[8]=='e') {  // see if checkbox was clicked
+          if (request[5]=='s' && request[6]=='a' && request[7]=='v' && request[8]=='e') {  
 
-            //Serial.println(request);
-            //Serial.println(request.indexOf(" HTTP"));
-            //String rest = request.substring(10,request.indexOf(" HTTP"));
+            // /save?s=xx.xx.xx.xx&p=xxxx&u=xxxx&i=xx.xx.xx.xx&h=a
+            char *new_server = strtok(request,"&")+12;  // xx.xx.xx.xx
+            char *new_port = strtok(NULL,"&");  // p=xxxx
+            char *new_hash = strtok(NULL,"&");  // u=xxxx
+            char *new_ip = strtok(NULL,"&");  // i=xx.xx.xx.xx
 
-            //rest+="&";
+            new_port=strtok(new_port,"="); // p
+            new_port=strtok(NULL,"=");    // xxxx
+            new_hash=strtok(new_hash,"="); // u
+            new_hash=strtok(NULL,"="); // xxxx
+            new_ip=strtok(new_ip,"="); // i
+            new_ip=strtok(NULL,"="); //xx.xx.xx.xx
 
-            for (int i=0;i<index;i++){
-              EEPROM.write(2+i,request[10+i]);
+            strcpy(server,new_server);
+            String newPortStr("");
+            for (int i =0;i<strlen(new_port);i++){
+              newPortStr+=new_port[i];
             }
-            EEPROM.write(2+index,'&');
+            port=newPortStr.toInt();
+            strcpy(testbedHash,testbedHash);
+            strcpy(static_ip,new_ip);
 
+            EEPROM.write(0,0);
             initFromProgmem();
             for (int i=0;i<119;i++){
               client.print((char)pgm_read_byte_near(string_1+i));
             }
             client.println("");
-            EEPROM.write(1,42);
+            EEPROM.write(0,42);
+
+            Serial.println("New Settings:");
+            Serial.print("s:");
+            Serial.println(server);
+            Serial.print("p:");
+            Serial.println(port);
+            Serial.print("h:");
+            Serial.println(testbedHash);
+            Serial.print("i:");
+            Serial.println(static_ip);
+
             wdt_enable(WDTO_2S);
             break;
           }
@@ -225,6 +261,31 @@ void MqttFlare::checkEthernet(){
     //Serial.println("client disonnected");
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -15,40 +15,42 @@
 #define ETH_CONF
 // Update these with values suitable for your network.
 
-    
- 
+#define MAC_EEPROM_OFFSET 500
+
+
 
 
 class MqttFlare{
 
 public :
   MqttFlare(){
-
-    // Then set up a table to refer to your strings.
-
-//    PROGMEM const char *string_table[] = 	   // change "string_table" name to suit
-//    {   
-//      string_0     };
-//
-
-    strcpy(server,"150.140.5.11");
-    strcpy(static_ip,"192.168.1.7");
-    strcpy(testbedHash,"0000000000000001");
-    //    strcpy(netmask,"255.255.0.0");
-    //    strcpy(gateway,"192.168.1.1");
+    strcpy(server,"console.sensorflare.com");
+    strcpy(static_ip,"0");
+    strcpy(testbedHash,"flare00000000001");
     port=1883;
     scount=0;
     static byte mac[] = { 
-      0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED            };
+      0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED       
+    };
+    int sensorValue = analogRead(A0);
+    randomSeed(sensorValue);
+    getMacAddress(mac);
+    Serial.println("Default Values loaded!");
+
     //EEPROM.write(0,0);
 
     initFromProgmem();
+    Serial.println("Initialized from Progmem!");
 
-
+    Serial.print("s:");
     Serial.println(server);
+    Serial.print("p:");
     Serial.println(port);
+    Serial.print("h:");
     Serial.println(testbedHash);
+    Serial.print("i:");
     Serial.println(static_ip);
+
     //    Serial.println(netmask);
     //    Serial.println(gateway);
 
@@ -59,23 +61,26 @@ public :
         Serial.println("DHCP failed!");
       }
       else{  
+        Serial.print("IP:");
         Serial.println(Ethernet.localIP());
       }
     }
     else{
-      byte ip [4];
-      String part="";
-      int index=0;
-      for (int i=0;i<strlen(static_ip);i++){  
-        if (static_ip[i]=='.'){
-          ip[index++]=part.toInt();
-          part="";
-        }
-        else{
-          part+=(char)static_ip[i];
-        }
-      }
-      ip[index++]=part.toInt();
+
+      //TODO:re-enable staticIp
+      //      byte ip [4];
+      //      String part="";
+      //      int index=0;
+      //      for (int i=0;i<strlen(static_ip);i++){  
+      //        if (static_ip[i]=='.'){
+      //          ip[index++]=part.toInt();
+      //          part="";
+      //        }
+      //        else{
+      //          part+=(char)static_ip[i];
+      //        }
+      //      }
+      //      ip[index++]=part.toInt();
       //
       //      byte gw [4];
       //       part="";
@@ -92,14 +97,16 @@ public :
       //      String part="";
       //      int index=0;
       //      for (int i=0;i<strlen(static_ip);i++){  
-      //        if (static_ip[i]=='.'){
-      //          ip[index++]=part.toInt();
+      //        if (static_ip[i]=='.'){      //          ip[index++]=part.toInt();
       //        }
       //        else{
       //          part+=(char)static_ip[i];
       //        }
       //      }
-      Ethernet.begin(mac,ip);
+      Ethernet.begin(mac);
+      Serial.print("IP:");
+      Serial.println(Ethernet.localIP());
+
     }
 
   }
@@ -147,23 +154,49 @@ private :
 #ifdef ETH_CONF
   EthernetServer * ethServer;
 #endif
-  char server[20];
+  char server[50];
   int port;
   char static_ip[20];
   //  char netmask[20];
   //  char gateway[20];
 
   char textbuffer[30];
-  char testbedHash[17];
+  char testbedHash[64];
 
   int scount;
   CoapSensor * sensors[6];
 
 
 
+  // This function takes a 6 byte array, and will fill every byte that is 0x00 with device unique data.
+  // The data is retrieved from a preset place in the Atmega EEPROM.
+  // If the particular EEPROM bytes are 0x00 or 0xFF, the data is ranomly generated and stored in EEPROM.
+
+  void getMacAddress(byte* macAddr) {
+    int eepromOffset = MAC_EEPROM_OFFSET;
+    int b = 0; 
+    for (int c = 0; c < 6; c++) {
+      b = 0;
+      if(macAddr[c] == 0) {
+        b = EEPROM.read(eepromOffset + c);
+        if(b == 0 || b == 255) {
+          b = random(0, 255);
+          EEPROM.write(eepromOffset + c, b);
+        }
+        macAddr[c] = b;
+      }
+    }
+  }
+
+
 };
 
 #endif //MQTT_FLARE
+
+
+
+
+
 
 
 

@@ -5,7 +5,7 @@ void UberdustGateway::setTestbedID(char* testbedID){
 }
 
 void UberdustGateway::connect( void callback(char*, uint8_t*, unsigned int)){
-  mqttClient= new PubSubClient("console.sensorflare.com", 1883, callback, *ethernetClient) ;
+  mqttClient= new PubSubClient("150.140.5.20", 1883, callback, *ethernetClient) ;
 
   _message_bus_count= sprintf(_message_bus,"%s",testbedID);
 

@@ -149,8 +149,9 @@ void setup()
   bootblink();
   ledState(STATE_BOOT);
 
-  int sensorValue = analogRead(A5);
+  int sensorValue = analogRead(A0);
   randomSeed(sensorValue);
+  getMacAddress(mac);
   getMacAddress(mac);
 
 
@@ -368,8 +369,8 @@ void connectXbee(){
 
   //Generate Unique mac based on xbee address
   uint16_t my_address = address;
-  mac[4] = (&my_address)[1];
-  mac[5] = (&my_address)[0];
+  //mac[4] = (&my_address)[1];
+  //mac[5] = (&my_address)[0];
 }
 
 

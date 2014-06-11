@@ -15,7 +15,7 @@ public:
   {
     this->pin = pin;
     pinMode(this->pin, OUTPUT);
-    set(EEPROM.read(100+this->pin));
+    set(EEPROM.read(100+this->pin)>0);
     set_notify_time(30);
   }
   void get_value( uint8_t* output_data, size_t* output_data_len)
